@@ -1,0 +1,19 @@
+{
+  "name": "bear-math-island",
+  "version": "1.0.0",
+  "description": "小熊算数岛 - 3-6岁儿童数学学习应用",
+  "main": "index.js",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "vue": "^3.3.4",
+    "ant-design-vue": "^4.0.0"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-vue": "^4.3.4",
+    "vite": "^4.4.9"
+  }
+}
