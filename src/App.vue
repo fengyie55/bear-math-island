@@ -1,19 +1,100 @@
 <template>
   <div id="app">
-    <GameUI />
+    <!-- 用户登录界面 -->
+    <UserLogin v-if="!currentUser" @login-success="handleLoginSuccess" />
+    
+    <!-- 主应用界面 -->
+    <div v-else class="main-app">
+      <!-- 用户信息栏 -->
+      <div class="user-header">
+        <div class="user-info">
+          <span class="user-avatar">{{ currentUser.avatar }}</span>
+          <span class="user-name">{{ currentUser.username }}</span>
+          <span class="user-stats">
+            连胜: {{ currentUser.stats?.currentStreak || 0 }} 
+            | 游戏: {{ currentUser.stats?.totalGames || 0 }}
+          </span>
+        </div>
+        <div class="header-actions">
+          <button class="btn-profile" @click="toggleProfile">
+            {{ showProfile ? '游戏' : '个人信息' }}
+          </button>
+          <button class="btn-logout" @click="handleLogout">
+            退出
+          </button>
+        </div>
+      </div>
+      
+      <!-- 内容区域 -->
+      <div class="content">
+        <!-- 个人信息页面 -->
+        <div v-if="showProfile" class="profile-content">
+          <UserProfile 
+            :user="currentUser" 
+            @logout="handleLogout"
+          />
+        </div>
+        
+        <!-- 游戏界面 -->
+        <div v-else class="game-content">
+          <GameUI />
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
 <script>
 import GameUI from './components/GameUI.vue'
+import UserLogin from './components/UserLogin.vue'
+import UserProfile from './components/UserProfile.vue'
+import StorageManager from './utils/storage'
 
 export default {
   name: 'App',
+  
   components: {
-    GameUI
+    GameUI,
+    UserLogin,
+    UserProfile
   },
-  setup() {
-    return {}
+  
+  data() {
+    return {
+      currentUser: null,
+      showProfile: false
+    }
+  },
+  
+  created() {
+    // 检查是否有已登录的用户
+    this.checkLoginStatus()
+  },
+  
+  methods: {
+    checkLoginStatus() {
+      const user = StorageManager.getCurrentUser()
+      if (user) {
+        this.currentUser = user
+        console.log('用户已登录:', user.username)
+      }
+    },
+    
+    handleLoginSuccess(user) {
+      this.currentUser = user
+      console.log('登录成功:', user.username)
+    },
+    
+    handleLogout() {
+      StorageManager.clearCurrentUser()
+      this.currentUser = null
+      this.showProfile = false
+      console.log('用户已退出')
+    },
+    
+    toggleProfile() {
+      this.showProfile = !this.showProfile
+    }
   }
 }
 </script>
@@ -35,6 +116,106 @@ body {
 #app {
   width: 100%;
   height: 100vh;
+}
+
+.main-app {
+  width: 100%;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* 用户信息栏 */
+.user-header {
+  background: white;
+  padding: 10px 15px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  z-index: 100;
+  flex-shrink: 0;
+  height: 60px;
+}
+
+.user-info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.user-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.3rem;
+  color: white;
+  flex-shrink: 0;
+}
+
+.user-name {
+  font-weight: 500;
+  font-size: 0.95rem;
+  color: #333;
+  white-space: nowrap;
+}
+
+.user-stats {
+  font-size: 0.8rem;
+  color: #666;
+  white-space: nowrap;
+}
+
+.header-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.btn-profile,
+.btn-logout {
+  padding: 6px 12px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  background: white;
+  cursor: pointer;
+  font-size: 0.85rem;
+  transition: all 0.3s ease;
+}
+
+.btn-profile:hover,
+.btn-logout:hover {
+  background: #f0f0f0;
+  transform: scale(1.05);
+}
+
+.btn-logout {
+  color: #ff4d4f;
+  border-color: #ff4d4f;
+}
+
+.btn-logout:hover {
+  background: #fff1f0;
+}
+
+/* 内容区域 */
+.content {
+  flex: 1;
+  overflow: hidden;
+  position: relative;
+}
+
+.profile-content,
+.game-content {
+  width: 100%;
+  height: 100%;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 10px;
 }
 
 /* 全局滚动条样式 */
@@ -79,11 +260,33 @@ body {
   html {
     font-size: 14px;
   }
+  
+  .user-header {
+    padding: 10px 15px;
+    flex-direction: column;
+    gap: 10px;
+    text-align: center;
+  }
+  
+  .user-info {
+    flex-direction: column;
+    gap: 5px;
+  }
+  
+  .user-stats {
+    font-size: 0.8rem;
+  }
 }
 
 @media (max-width: 480px) {
   html {
     font-size: 12px;
+  }
+  
+  .btn-profile,
+  .btn-logout {
+    padding: 6px 12px;
+    font-size: 0.8rem;
   }
 }
 </style>
