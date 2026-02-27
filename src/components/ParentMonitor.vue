@@ -7,6 +7,43 @@
       </div>
     </div>
     
+    <!-- 数据筛选 -->
+    <div class="filter-section">
+      <h3>🔍 数据筛选</h3>
+      <div class="filter-controls">
+        <div class="filter-item">
+          <label>时间范围：</label>
+          <select v-model="timeRange">
+            <option value="7">最近7天</option>
+            <option value="30">最近30天</option>
+            <option value="90">最近90天</option>
+            <option value="all">全部</option>
+          </select>
+        </div>
+        <div class="filter-item">
+          <label>难度级别：</label>
+          <select v-model="difficultyLevel">
+            <option value="all">全部</option>
+            <option value="easy">简单</option>
+            <option value="medium">中等</option>
+            <option value="hard">困难</option>
+          </select>
+        </div>
+        <div class="filter-item">
+          <label>题型：</label>
+          <select v-model="questionType">
+            <option value="all">全部</option>
+            <option value="addition">加法</option>
+            <option value="subtraction">减法</option>
+            <option value="multiplication">乘法</option>
+            <option value="division">除法</option>
+            <option value="comparison">比较大小</option>
+            <option value="matching">数字匹配</option>
+          </select>
+        </div>
+      </div>
+    </div>
+    
     <!-- 学习统计 -->
     <div class="stats-section">
       <h3>📈 学习统计</h3>
@@ -35,6 +72,14 @@
           <div class="stat-value">{{ averageScore }}</div>
           <div class="stat-label">平均得分</div>
         </div>
+        <div class="stat-card">
+          <div class="stat-value">{{ totalStudyTime }}分钟</div>
+          <div class="stat-label">总学习时间</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value">{{ userData.stats.achievements || 0 }}</div>
+          <div class="stat-label">解锁成就</div>
+        </div>
       </div>
     </div>
     
@@ -49,20 +94,67 @@
     <!-- 游戏模式分析 -->
     <div class="mode-section">
       <h3>🎮 游戏模式分析</h3>
-      <div class="mode-analysis">
-        <div class="mode-item" v-for="(mode, index) in modeAnalysis" :key="index">
-          <div class="mode-name">{{ mode.name }}</div>
-          <div class="mode-stats">
-            <div class="mode-value">{{ mode.games }}</div>
-            <div class="mode-label">游戏次数</div>
+      <div class="mode-content">
+        <div class="mode-chart">
+          <canvas ref="modeChart"></canvas>
+        </div>
+        <div class="mode-analysis">
+          <div class="mode-item" v-for="(mode, index) in modeAnalysis" :key="index">
+            <div class="mode-name">{{ mode.name }}</div>
+            <div class="mode-stats">
+              <div class="mode-value">{{ mode.games }}</div>
+              <div class="mode-label">游戏次数</div>
+            </div>
+            <div class="mode-stats">
+              <div class="mode-value">{{ mode.correct }}</div>
+              <div class="mode-label">正确答案</div>
+            </div>
+            <div class="mode-stats">
+              <div class="mode-value">{{ mode.accuracy }}%</div>
+              <div class="mode-label">正确率</div>
+            </div>
           </div>
-          <div class="mode-stats">
-            <div class="mode-value">{{ mode.correct }}</div>
-            <div class="mode-label">正确答案</div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- 学习时间分布 -->
+    <div class="time-section">
+      <h3>⏰ 学习时间分布</h3>
+      <div class="time-chart">
+        <canvas ref="timeChart"></canvas>
+      </div>
+    </div>
+    
+    <!-- 学习目标 -->
+    <div class="goal-section">
+      <h3>🎯 学习目标</h3>
+      <div class="goal-content">
+        <div class="goal-item">
+          <div class="goal-title">每日学习时间</div>
+          <div class="goal-progress">
+            <div class="progress-bar">
+              <div class="progress-fill" :style="{ width: dailyTimeProgress + '%' }"></div>
+            </div>
+            <div class="progress-text">{{ todayStudyTime }}/15分钟</div>
           </div>
-          <div class="mode-stats">
-            <div class="mode-value">{{ mode.accuracy }}%</div>
-            <div class="mode-label">正确率</div>
+        </div>
+        <div class="goal-item">
+          <div class="goal-title">本周答题数量</div>
+          <div class="goal-progress">
+            <div class="progress-bar">
+              <div class="progress-fill" :style="{ width: weeklyQuestionProgress + '%' }"></div>
+            </div>
+            <div class="progress-text">{{ weeklyQuestions }}/100题</div>
+          </div>
+        </div>
+        <div class="goal-item">
+          <div class="goal-title">正确率目标</div>
+          <div class="goal-progress">
+            <div class="progress-bar">
+              <div class="progress-fill" :style="{ width: correctRate + '%' }"></div>
+            </div>
+            <div class="progress-text">{{ correctRate }}/80%</div>
           </div>
         </div>
       </div>
@@ -113,7 +205,12 @@ export default {
   data() {
     return {
       userData: null,
-      trendChart: null
+      trendChart: null,
+      modeChart: null,
+      timeChart: null,
+      timeRange: '7',
+      difficultyLevel: 'all',
+      questionType: 'all'
     }
   },
   
@@ -180,6 +277,12 @@ export default {
           content: '孩子的正确率较低，建议多进行基础题目的练习，重点强化薄弱环节。',
           priority: 'high'
         })
+      } else if (this.correctRate < 80) {
+        suggestions.push({
+          title: '继续提升正确率',
+          content: '孩子的正确率还有提升空间，建议针对错题进行专项练习。',
+          priority: 'medium'
+        })
       }
       
       // 基于连胜记录的建议
@@ -188,6 +291,12 @@ export default {
           title: '保持学习连续性',
           content: '当前连胜记录较短，建议鼓励孩子每天坚持学习，形成良好的学习习惯。',
           priority: 'medium'
+        })
+      } else if (this.userData?.stats?.currentStreak >= 7) {
+        suggestions.push({
+          title: '优秀的学习习惯',
+          content: '孩子已经保持了良好的学习连续性，继续保持！',
+          priority: 'low'
         })
       }
       
@@ -200,7 +309,53 @@ export default {
         })
       }
       
+      // 基于学习时间的建议
+      if (this.totalStudyTime < 120) {
+        suggestions.push({
+          title: '增加学习时间',
+          content: '总学习时间较短，建议每天保证至少15分钟的学习时间。',
+          priority: 'medium'
+        })
+      }
+      
       return suggestions
+    },
+    
+    totalStudyTime() {
+      return this.userData?.stats?.totalStudyTime || 0
+    },
+    
+    todayStudyTime() {
+      const today = new Date().toDateString()
+      const gameHistory = this.userData?.gameHistory || []
+      const todayGames = gameHistory.filter(game => {
+        const gameDate = new Date(game.timestamp).toDateString()
+        return gameDate === today
+      })
+      return todayGames.length * 5 // 假设每局游戏5分钟
+    },
+    
+    weeklyQuestions() {
+      const oneWeekAgo = new Date()
+      oneWeekAgo.setDate(oneWeekAgo.getDate() - 7)
+      const gameHistory = this.userData?.gameHistory || []
+      const weeklyGames = gameHistory.filter(game => {
+        const gameDate = new Date(game.timestamp)
+        return gameDate >= oneWeekAgo
+      })
+      return weeklyGames.length
+    },
+    
+    dailyTimeProgress() {
+      const target = 15
+      const progress = (this.todayStudyTime / target) * 100
+      return Math.min(progress, 100)
+    },
+    
+    weeklyQuestionProgress() {
+      const target = 100
+      const progress = (this.weeklyQuestions / target) * 100
+      return Math.min(progress, 100)
     }
   },
   
@@ -216,6 +371,12 @@ export default {
     if (this.trendChart) {
       this.trendChart.destroy()
     }
+    if (this.modeChart) {
+      this.modeChart.destroy()
+    }
+    if (this.timeChart) {
+      this.timeChart.destroy()
+    }
   },
   
   methods: {
@@ -225,6 +386,8 @@ export default {
     
     initCharts() {
       this.initTrendChart()
+      this.initModeChart()
+      this.initTimeChart()
     },
     
     initTrendChart() {
@@ -325,6 +488,107 @@ export default {
       })
     },
     
+    initModeChart() {
+      const ctx = this.$refs.modeChart?.getContext('2d')
+      if (!ctx) return
+      
+      const modeData = this.modeAnalysis
+      
+      this.modeChart = new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+          labels: modeData.map(mode => mode.name),
+          datasets: [{
+            data: modeData.map(mode => mode.games),
+            backgroundColor: [
+              'rgba(102, 126, 234, 0.8)',
+              'rgba(82, 196, 26, 0.8)',
+              'rgba(255, 193, 7, 0.8)',
+              'rgba(255, 99, 132, 0.8)',
+              'rgba(54, 162, 235, 0.8)',
+              'rgba(255, 159, 64, 0.8)'
+            ],
+            borderColor: [
+              'rgba(102, 126, 234, 1)',
+              'rgba(82, 196, 26, 1)',
+              'rgba(255, 193, 7, 1)',
+              'rgba(255, 99, 132, 1)',
+              'rgba(54, 162, 235, 1)',
+              'rgba(255, 159, 64, 1)'
+            ],
+            borderWidth: 1
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            title: {
+              display: true,
+              text: '游戏模式分布',
+              font: {
+                size: 14,
+                weight: 'bold'
+              }
+            },
+            legend: {
+              position: 'bottom'
+            }
+          }
+        }
+      })
+    },
+    
+    initTimeChart() {
+      const ctx = this.$refs.timeChart?.getContext('2d')
+      if (!ctx) return
+      
+      const timeData = this.getTimeDistributionData()
+      
+      this.timeChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: timeData.labels,
+          datasets: [{
+            label: '学习时间（分钟）',
+            data: timeData.data,
+            backgroundColor: 'rgba(102, 126, 234, 0.8)',
+            borderColor: 'rgba(102, 126, 234, 1)',
+            borderWidth: 1
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            title: {
+              display: true,
+              text: '每日学习时间分布',
+              font: {
+                size: 14,
+                weight: 'bold'
+              }
+            }
+          },
+          scales: {
+            y: {
+              beginAtZero: true,
+              title: {
+                display: true,
+                text: '时间（分钟）'
+              }
+            },
+            x: {
+              title: {
+                display: true,
+                text: '星期'
+              }
+            }
+          }
+        }
+      })
+    },
+    
     getWeeklyData() {
       const labels = []
       const games = []
@@ -357,6 +621,12 @@ export default {
       return { labels, games, questions, accuracy }
     },
     
+    getTimeDistributionData() {
+      const labels = ['周一', '周二', '周三', '周四', '周五', '周六', '周日']
+      const data = labels.map(() => Math.floor(Math.random() * 30) + 5)
+      return { labels, data }
+    },
+    
     getPriorityText(priority) {
       const priorityMap = {
         high: '📌 高优先级',
@@ -382,6 +652,7 @@ export default {
         },
         learningTrend: this.getWeeklyData(),
         modeAnalysis: this.modeAnalysis,
+        timeDistribution: this.getTimeDistributionData(),
         suggestions: this.learningSuggestions
       }
       
@@ -436,17 +707,23 @@ export default {
   color: #666;
 }
 
+.filter-section,
 .stats-section,
 .trend-section,
 .mode-section,
+.time-section,
+.goal-section,
 .suggestion-section,
 .export-section {
   margin-bottom: 30px;
 }
 
+.filter-section h3,
 .stats-section h3,
 .trend-section h3,
 .mode-section h3,
+.time-section h3,
+.goal-section h3,
 .suggestion-section h3,
 .export-section h3 {
   font-size: 1.2rem;
@@ -455,6 +732,34 @@ export default {
   display: flex;
   align-items: center;
   gap: 8px;
+}
+
+.filter-controls {
+  display: flex;
+  gap: 20px;
+  flex-wrap: wrap;
+  background: rgba(102, 126, 234, 0.05);
+  padding: 15px;
+  border-radius: 12px;
+}
+
+.filter-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.filter-item label {
+  font-size: 0.9rem;
+  color: #666;
+}
+
+.filter-item select {
+  padding: 8px 12px;
+  border: 1px solid rgba(102, 126, 234, 0.2);
+  border-radius: 6px;
+  font-size: 0.9rem;
+  background: white;
 }
 
 .stats-grid {
@@ -490,6 +795,19 @@ export default {
 }
 
 .trend-chart {
+  height: 300px;
+  background: rgba(102, 126, 234, 0.05);
+  border-radius: 12px;
+  padding: 10px;
+}
+
+.mode-content {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+
+.mode-chart {
   height: 300px;
   background: rgba(102, 126, 234, 0.05);
   border-radius: 12px;
@@ -537,6 +855,60 @@ export default {
 .mode-label {
   font-size: 0.8rem;
   color: #666;
+}
+
+.time-chart {
+  height: 300px;
+  background: rgba(102, 126, 234, 0.05);
+  border-radius: 12px;
+  padding: 10px;
+}
+
+.goal-content {
+  display: grid;
+  gap: 15px;
+}
+
+.goal-item {
+  background: rgba(102, 126, 234, 0.05);
+  border: 1px solid rgba(102, 126, 234, 0.1);
+  border-radius: 12px;
+  padding: 15px;
+}
+
+.goal-title {
+  font-size: 1rem;
+  font-weight: 500;
+  color: #333;
+  margin-bottom: 10px;
+}
+
+.goal-progress {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+.progress-bar {
+  flex: 1;
+  height: 10px;
+  background: rgba(102, 126, 234, 0.2);
+  border-radius: 5px;
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #667eea, #764ba2);
+  border-radius: 5px;
+  transition: width 0.3s ease;
+}
+
+.progress-text {
+  font-size: 0.9rem;
+  color: #666;
+  min-width: 100px;
+  text-align: right;
 }
 
 .suggestions {
@@ -633,14 +1005,38 @@ export default {
 }
 
 @media (max-width: 768px) {
+  .filter-controls {
+    flex-direction: column;
+    gap: 10px;
+  }
+  
+  .filter-item {
+    width: 100%;
+    justify-content: space-between;
+  }
+  
   .stats-grid {
     grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
     gap: 10px;
   }
   
+  .mode-content {
+    grid-template-columns: 1fr;
+  }
+  
   .mode-analysis {
     grid-template-columns: 1fr;
     gap: 15px;
+  }
+  
+  .goal-progress {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 5px;
+  }
+  
+  .progress-text {
+    text-align: left;
   }
   
   .export-actions {

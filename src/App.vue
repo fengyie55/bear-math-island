@@ -22,6 +22,12 @@
           <button class="btn-monitor" @click="toggleMonitor">
             {{ showMonitor ? '游戏' : '家长监控' }}
           </button>
+          <button class="btn-leaderboard" @click="toggleLeaderboard">
+            {{ showLeaderboard ? '游戏' : '排行榜' }}
+          </button>
+          <button class="btn-achievement" @click="toggleAchievement">
+            {{ showAchievement ? '游戏' : '成就' }}
+          </button>
           <button class="btn-logout" @click="handleLogout">
             退出
           </button>
@@ -46,6 +52,16 @@
           />
         </div>
         
+        <!-- 排行榜页面 -->
+        <div v-else-if="showLeaderboard" class="leaderboard-content">
+          <Leaderboard />
+        </div>
+        
+        <!-- 成就页面 -->
+        <div v-else-if="showAchievement" class="achievement-content">
+          <Achievement />
+        </div>
+        
         <!-- 游戏界面 -->
         <div v-else class="game-content">
           <GameUI />
@@ -60,6 +76,8 @@ import GameUI from './components/GameUI.vue'
 import UserLogin from './components/UserLogin.vue'
 import UserProfile from './components/UserProfile.vue'
 import ParentMonitor from './components/ParentMonitor.vue'
+import Leaderboard from './components/Leaderboard.vue'
+import Achievement from './components/Achievement.vue'
 import StorageManager from './utils/storage'
 
 export default {
@@ -69,14 +87,18 @@ export default {
     GameUI,
     UserLogin,
     UserProfile,
-    ParentMonitor
+    ParentMonitor,
+    Leaderboard,
+    Achievement
   },
   
   data() {
     return {
       currentUser: null,
       showProfile: false,
-      showMonitor: false
+      showMonitor: false,
+      showLeaderboard: false,
+      showAchievement: false
     }
   },
   
@@ -103,17 +125,38 @@ export default {
       StorageManager.clearCurrentUser()
       this.currentUser = null
       this.showProfile = false
+      this.showMonitor = false
+      this.showLeaderboard = false
+      this.showAchievement = false
       console.log('用户已退出')
     },
     
     toggleProfile() {
       this.showProfile = !this.showProfile
       this.showMonitor = false
+      this.showLeaderboard = false
+      this.showAchievement = false
     },
     
     toggleMonitor() {
       this.showMonitor = !this.showMonitor
       this.showProfile = false
+      this.showLeaderboard = false
+      this.showAchievement = false
+    },
+    
+    toggleLeaderboard() {
+      this.showLeaderboard = !this.showLeaderboard
+      this.showProfile = false
+      this.showMonitor = false
+      this.showAchievement = false
+    },
+    
+    toggleAchievement() {
+      this.showAchievement = !this.showAchievement
+      this.showProfile = false
+      this.showMonitor = false
+      this.showLeaderboard = false
     },
     
     resetData() {
@@ -127,14 +170,18 @@ export default {
           totalIncorrect: 0,
           currentStreak: 0,
           bestStreak: 0,
-          averageScore: 0
+          averageScore: 0,
+          totalStudyTime: 0,
+          achievements: 0
         },
-        gameHistory: []
+        gameHistory: [],
+        achievements: []
       }
       
       StorageManager.updateUser(this.currentUser.id, {
         stats: this.currentUser.stats,
-        gameHistory: []
+        gameHistory: [],
+        achievements: []
       })
     }
   }
@@ -220,6 +267,8 @@ body {
 
 .btn-profile,
 .btn-monitor,
+.btn-leaderboard,
+.btn-achievement,
 .btn-logout {
   padding: 6px 12px;
   border: 1px solid #ddd;
@@ -232,6 +281,8 @@ body {
 
 .btn-profile:hover,
 .btn-monitor:hover,
+.btn-leaderboard:hover,
+.btn-achievement:hover,
 .btn-logout:hover {
   background: #f0f0f0;
   transform: scale(1.05);
@@ -244,6 +295,24 @@ body {
 
 .btn-monitor:hover {
   background: #f6ffed;
+}
+
+.btn-leaderboard {
+  color: #faad14;
+  border-color: #faad14;
+}
+
+.btn-leaderboard:hover {
+  background: #fffbe6;
+}
+
+.btn-achievement {
+  color: #1890ff;
+  border-color: #1890ff;
+}
+
+.btn-achievement:hover {
+  background: #e6f7ff;
 }
 
 .btn-logout {
@@ -265,6 +334,8 @@ body {
 
 .profile-content,
 .monitor-content,
+.leaderboard-content,
+.achievement-content,
 .game-content {
   width: 100%;
   min-height: 100%;

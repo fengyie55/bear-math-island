@@ -120,6 +120,24 @@
           <div class="practice-level-title">10以内混合运算</div>
           <div class="practice-level-difficulty">⭐⭐⭐ 困难</div>
         </div>
+        
+        <div class="practice-level" @click="selectPracticeLevel('乘法表')">
+          <div class="practice-level-icon">✖️</div>
+          <div class="practice-level-title">乘法表</div>
+          <div class="practice-level-difficulty">⭐⭐ 中等</div>
+        </div>
+        
+        <div class="practice-level" @click="selectPracticeLevel('数字认识')">
+          <div class="practice-level-icon">🔢</div>
+          <div class="practice-level-title">数字认识</div>
+          <div class="practice-level-difficulty">⭐ 简单</div>
+        </div>
+        
+        <div class="practice-level" @click="selectPracticeLevel('比较大小')">
+          <div class="practice-level-icon">📏</div>
+          <div class="practice-level-title">比较大小</div>
+          <div class="practice-level-difficulty">⭐⭐ 中等</div>
+        </div>
       </div>
     </div>
 
@@ -188,11 +206,11 @@
 
     <!-- 反馈弹窗 -->
     <div class="feedback-modal" v-if="showFeedback">
-      <div class="modal-content" :class="{ 'correct': isCorrect, 'wrong': !isCorrect }">
-        <div class="feedback-icon">{{ isCorrect ? '🎉' : '😊' }}</div>
+      <div class="modal-content" :class="{ 'correct': isCorrect, 'wrong': !isCorrect, 'animate': showFeedback }">
+        <div class="feedback-icon" :class="{ 'bounce': isCorrect }">{{ isCorrect ? '🎉' : '😊' }}</div>
         <div class="feedback-title">{{ isCorrect ? '太棒了！' : '再试一次' }}</div>
         <div class="feedback-text">{{ feedbackText }}</div>
-        <button class="next-button" @click="nextQuestion">
+        <button class="next-button" @click="nextQuestion" :class="{ 'pulse': isCorrect }">
           {{ isCorrect ? '下一题' : '再想想' }}
         </button>
       </div>
@@ -200,15 +218,15 @@
 
     <!-- 练习完成界面 -->
     <div class="completion-modal" v-if="showCompletion">
-      <div class="modal-content">
-        <div class="completion-icon">🏆</div>
+      <div class="modal-content animate">
+        <div class="completion-icon spin">🏆</div>
         <div class="completion-title">恭喜完成练习！</div>
         <div class="completion-message">
-          <div class="score-info">得分：{{ finalScore }}分</div>
+          <div class="score-info pulse">得分：{{ finalScore }}分</div>
           <div class="accuracy-info">正确率：{{ Math.round((correctAnswers / totalQuestionsPerLevel) * 100) }}%</div>
         </div>
         <div class="completion-actions">
-          <button class="continue-button" @click="continuePractice">
+          <button class="continue-button pulse" @click="continuePractice">
             🔄 继续练习
           </button>
           <button class="back-button" @click="backToPractice">
@@ -258,6 +276,16 @@
               </label>
             </div>
           </div>
+          
+          <div class="setting-item">
+            <div class="setting-label">音效</div>
+            <div class="setting-value">
+              <label class="toggle-switch">
+                <input type="checkbox" v-model="soundEnabled">
+                <span class="slider"></span>
+              </label>
+            </div>
+          </div>
         </div>
         
         <div class="modal-footer">
@@ -297,6 +325,7 @@ export default {
       showSettings: false,
       showCompletion: false,
       voiceEnabled: true,
+      soundEnabled: true,
       eyeProtectionEnabled: true,
       dailyDurationLimit: 15,
       dailyPlayTime: 0,
@@ -435,6 +464,27 @@ export default {
           { text: '6 + 4 = ?', items: ['🍎', '🍎', '🍎', '🍎', '🍎', '🍎', '🍊', '🍊', '🍊', '🍊'], answer: 10 },
           { text: '9 - 5 = ?', items: ['🍎', '🍎', '🍎', '🍎'], answer: 4 },
           { text: '5 + 5 = ?', items: ['🍎', '🍎', '🍎', '🍎', '🍎', '🍊', '🍊', '🍊', '🍊', '🍊'], answer: 10 }
+        ],
+        '乘法表': [
+          { text: '2 × 2 = ?', items: ['🍎', '🍎', '🍎', '🍎'], answer: 4 },
+          { text: '3 × 4 = ?', items: ['🍎', '🍎', '🍎', '🍎', '🍎', '🍎', '🍎', '🍎', '🍎', '🍎', '🍎', '🍎'], answer: 12 },
+          { text: '5 × 5 = ?', items: ['🍎', '🍎', '🍎', '🍎', '🍎', '🍎', '🍎', '🍎', '🍎', '🍎', '🍎', '🍎', '🍎', '🍎', '🍎', '🍎', '🍎', '🍎', '🍎', '🍎', '🍎', '🍎', '🍎', '🍎', '🍎'], answer: 25 },
+          { text: '7 × 3 = ?', items: ['🍎', '🍎', '🍎', '🍎', '🍎', '🍎', '🍎', '🍎', '🍎', '🍎', '🍎', '🍎', '🍎', '🍎', '🍎', '🍎', '🍎', '🍎', '🍎', '🍎', '🍎'], answer: 21 },
+          { text: '9 × 2 = ?', items: ['🍎', '🍎', '🍎', '🍎', '🍎', '🍎', '🍎', '🍎', '🍎', '🍎', '🍎', '🍎', '🍎', '🍎', '🍎', '🍎', '🍎', '🍎'], answer: 18 }
+        ],
+        '数字认识': [
+          { text: '图中有几个苹果？', items: ['🍎', '🍎', '🍎'], answer: 3 },
+          { text: '图中有几个橙子？', items: ['🍊', '🍊', '🍊', '🍊'], answer: 4 },
+          { text: '图中有几个草莓？', items: ['🍓', '🍓', '🍓', '🍓', '🍓'], answer: 5 },
+          { text: '图中有几个葡萄？', items: ['🍇', '🍇', '🍇', '🍇', '🍇', '🍇'], answer: 6 },
+          { text: '图中有几个樱桃？', items: ['🍒', '🍒', '🍒', '🍒', '🍒', '🍒', '🍒'], answer: 7 }
+        ],
+        '比较大小': [
+          { text: '3 和 5，哪个大？', items: ['3', '5'], answer: 5 },
+          { text: '8 和 2，哪个大？', items: ['8', '2'], answer: 8 },
+          { text: '4 和 4，哪个大？', items: ['4', '4'], answer: 4 },
+          { text: '7 和 9，哪个大？', items: ['7', '9'], answer: 9 },
+          { text: '1 和 10，哪个大？', items: ['1', '10'], answer: 10 }
         ]
       }
 
@@ -491,7 +541,13 @@ export default {
     const generateOptions = (correctAnswer) => {
       const options = [correctAnswer]
       while (options.length < 4) {
-        const randomNum = Math.floor(Math.random() * 10)
+        let randomNum
+        if (correctAnswer > 10) {
+          // 对于较大的数字，生成更接近的选项
+          randomNum = Math.floor(Math.random() * 10) + (correctAnswer - 5)
+        } else {
+          randomNum = Math.floor(Math.random() * 10)
+        }
         if (!options.includes(randomNum)) {
           options.push(randomNum)
         }
@@ -510,6 +566,8 @@ export default {
     const selectAnswer = (option) => {
       if (state.showFeedback) return
 
+      playSound('click')
+      
       const isCorrect = option === state.currentQuestion.answer
       state.isCorrect = isCorrect
       state.selectedOption = state.currentQuestion.options.indexOf(option)
@@ -519,9 +577,11 @@ export default {
         state.correctAnswers++
         state.currentScore += 10
         state.feedbackText = '你太棒了！小熊给你点赞！🎉'
+        playSound('correct')
       } else {
         state.wrongAnswers++
         state.feedbackText = '没关系，我们再一起数一数！😊'
+        playSound('wrong')
       }
 
       // 记录游戏结果
@@ -564,34 +624,40 @@ export default {
           generatePracticeQuestion()
         }
       } else {
-        // 练习模式完成
-        if (state.selectedMode === 'practice') {
-          // 显示完成界面
-          state.finalScore = state.currentScore
-          state.totalScore += state.currentScore
-          state.totalQuestions += state.totalQuestionsPerLevel
-          state.bestScore = Math.max(state.bestScore, state.currentScore)
-          
-          // 显示完成选项
-          state.showCompletion = true
-        } else {
-          // 冒险模式完成
-          state.finalScore = state.currentScore
-          state.totalScore += state.currentScore
-          state.totalQuestions += state.totalQuestionsPerLevel
-          state.bestScore = Math.max(state.bestScore, state.currentScore)
-          
-          // 解锁下一关
-          const currentAreaIndex = state.islandMap.areas.findIndex(area => area.id === state.currentArea)
-          if (currentAreaIndex < state.islandMap.areas.length - 1) {
-            state.islandMap.areas[currentAreaIndex].completed = true
-            state.islandMap.areas[currentAreaIndex + 1].unlocked = true
+          // 练习模式完成
+          if (state.selectedMode === 'practice') {
+            // 显示完成界面
+            state.finalScore = state.currentScore
+            state.totalScore += state.currentScore
+            state.totalQuestions += state.totalQuestionsPerLevel
+            state.bestScore = Math.max(state.bestScore, state.currentScore)
+            
+            // 播放完成音效
+            playSound('completion')
+            
+            // 显示完成选项
+            state.showCompletion = true
+          } else {
+            // 冒险模式完成
+            state.finalScore = state.currentScore
+            state.totalScore += state.currentScore
+            state.totalQuestions += state.totalQuestionsPerLevel
+            state.bestScore = Math.max(state.bestScore, state.currentScore)
+            
+            // 播放完成音效
+            playSound('completion')
+            
+            // 解锁下一关
+            const currentAreaIndex = state.islandMap.areas.findIndex(area => area.id === state.currentArea)
+            if (currentAreaIndex < state.islandMap.areas.length - 1) {
+              state.islandMap.areas[currentAreaIndex].completed = true
+              state.islandMap.areas[currentAreaIndex + 1].unlocked = true
+            }
+            
+            state.currentScreen = 'main'
+            state.selectedMode = null
           }
-          
-          state.currentScreen = 'main'
-          state.selectedMode = null
         }
-      }
     }
 
     const playQuestionVoice = () => {
@@ -604,11 +670,64 @@ export default {
       }
     }
 
+    const playSound = (type) => {
+      if (!state.soundEnabled) return
+      
+      // 这里使用Web Audio API创建简单的音效
+      const audioContext = new (window.AudioContext || window.webkitAudioContext)()
+      const oscillator = audioContext.createOscillator()
+      const gainNode = audioContext.createGain()
+      
+      oscillator.connect(gainNode)
+      gainNode.connect(audioContext.destination)
+      
+      switch (type) {
+        case 'correct':
+          oscillator.type = 'sine'
+          oscillator.frequency.setValueAtTime(523.25, audioContext.currentTime) // C5
+          oscillator.frequency.exponentialRampToValueAtTime(880, audioContext.currentTime + 0.1) // A5
+          gainNode.gain.setValueAtTime(0.3, audioContext.currentTime)
+          gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.5)
+          oscillator.start(audioContext.currentTime)
+          oscillator.stop(audioContext.currentTime + 0.5)
+          break
+        case 'wrong':
+          oscillator.type = 'sawtooth'
+          oscillator.frequency.setValueAtTime(440, audioContext.currentTime) // A4
+          oscillator.frequency.exponentialRampToValueAtTime(220, audioContext.currentTime + 0.3) // A3
+          gainNode.gain.setValueAtTime(0.3, audioContext.currentTime)
+          gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.5)
+          oscillator.start(audioContext.currentTime)
+          oscillator.stop(audioContext.currentTime + 0.5)
+          break
+        case 'click':
+          oscillator.type = 'square'
+          oscillator.frequency.setValueAtTime(880, audioContext.currentTime) // A5
+          gainNode.gain.setValueAtTime(0.2, audioContext.currentTime)
+          gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.1)
+          oscillator.start(audioContext.currentTime)
+          oscillator.stop(audioContext.currentTime + 0.1)
+          break
+        case 'completion':
+          oscillator.type = 'sine'
+          oscillator.frequency.setValueAtTime(523.25, audioContext.currentTime) // C5
+          oscillator.frequency.exponentialRampToValueAtTime(659.25, audioContext.currentTime + 0.2) // E5
+          oscillator.frequency.exponentialRampToValueAtTime(783.99, audioContext.currentTime + 0.4) // G5
+          oscillator.frequency.exponentialRampToValueAtTime(1046.5, audioContext.currentTime + 0.6) // C6
+          gainNode.gain.setValueAtTime(0.3, audioContext.currentTime)
+          gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 1)
+          oscillator.start(audioContext.currentTime)
+          oscillator.stop(audioContext.currentTime + 1)
+          break
+      }
+    }
+
     const saveSettings = () => {
       // 保存设置到本地存储
       const settings = {
         dailyDurationLimit: state.dailyDurationLimit,
         voiceEnabled: state.voiceEnabled,
+        soundEnabled: state.soundEnabled,
         eyeProtectionEnabled: state.eyeProtectionEnabled
       }
       localStorage.setItem('bearMathSettings', JSON.stringify(settings))
@@ -650,6 +769,7 @@ export default {
         const settings = JSON.parse(savedSettings)
         state.dailyDurationLimit = settings.dailyDurationLimit || 15
         state.voiceEnabled = settings.voiceEnabled !== false
+        state.soundEnabled = settings.soundEnabled !== false
         state.eyeProtectionEnabled = settings.eyeProtectionEnabled !== false
       }
     }
@@ -1233,6 +1353,30 @@ export default {
   margin-bottom: 20px;
 }
 
+.feedback-icon.bounce {
+  animation: bounce 1s ease-in-out;
+}
+
+.next-button.pulse {
+  animation: pulse 1s ease-in-out;
+}
+
+.modal-content.animate {
+  animation: modalSlideIn 0.5s ease-out;
+}
+
+.completion-icon.spin {
+  animation: spin 1s ease-in-out;
+}
+
+.score-info.pulse {
+  animation: pulse 1s ease-in-out;
+}
+
+.continue-button.pulse {
+  animation: pulse 1s ease-in-out;
+}
+
 .feedback-title {
   font-size: 1.8rem;
   font-weight: bold;
@@ -1439,6 +1583,70 @@ input:checked + .slider:before {
   }
   to {
     transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes bounce {
+  0%, 20%, 50%, 80%, 100% {
+    transform: translateY(0);
+  }
+  40% {
+    transform: translateY(-20px);
+  }
+  60% {
+    transform: translateY(-10px);
+  }
+}
+
+@keyframes pulse {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.05);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+@keyframes spin {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slideInRight {
+  from {
+    transform: translateX(100px);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes slideInLeft {
+  from {
+    transform: translateX(-100px);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
     opacity: 1;
   }
 }

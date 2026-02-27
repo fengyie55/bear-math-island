@@ -204,6 +204,11 @@ class StorageManager {
     }
   }
 
+  // 获取所有用户（用于排行榜）
+  static getAllUsers() {
+    return this.getUsers()
+  }
+
   // 设置当前登录用户
   static setCurrentUser(userId) {
     try {
