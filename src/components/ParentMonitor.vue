@@ -160,6 +160,39 @@
       </div>
     </div>
     
+    <!-- 技能分析 -->
+    <div class="skill-section">
+      <h3>🎯 技能分析</h3>
+      <div class="skill-content">
+        <div class="skill-item">
+          <div class="skill-title">擅长领域</div>
+          <div class="skill-tags">
+            <span 
+              class="skill-tag strong" 
+              v-for="(area, index) in strongAreas" 
+              :key="index"
+            >
+              {{ getAreaName(area) }}
+            </span>
+            <span v-if="strongAreas.length === 0" class="skill-tag empty">暂无数据</span>
+          </div>
+        </div>
+        <div class="skill-item">
+          <div class="skill-title">薄弱环节</div>
+          <div class="skill-tags">
+            <span 
+              class="skill-tag weak" 
+              v-for="(area, index) in weakAreas" 
+              :key="index"
+            >
+              {{ getAreaName(area) }}
+            </span>
+            <span v-if="weakAreas.length === 0" class="skill-tag empty">暂无数据</span>
+          </div>
+        </div>
+      </div>
+    </div>
+    
     <!-- 学习建议 -->
     <div class="suggestion-section">
       <h3>💡 学习建议</h3>
@@ -356,6 +389,14 @@ export default {
       const target = 100
       const progress = (this.weeklyQuestions / target) * 100
       return Math.min(progress, 100)
+    },
+    
+    strongAreas() {
+      return this.userData?.stats?.strongAreas || []
+    },
+    
+    weakAreas() {
+      return this.userData?.stats?.weakAreas || []
     }
   },
   
@@ -596,11 +637,11 @@ export default {
       const accuracy = []
       
       const today = new Date()
+      const gameHistory = this.userData?.gameHistory || []
       
       for (let i = 6; i >= 0; i--) {
         const date = new Date(today)
         date.setDate(today.getDate() - i)
-        
         const dateStr = date.toLocaleDateString('zh-CN', {
           month: 'short',
           day: 'numeric'
@@ -608,13 +649,18 @@ export default {
         
         labels.push(dateStr)
         
-        // 模拟数据（实际项目中应从API获取）
-        const dayGames = Math.floor(Math.random() * 10)
-        const dayQuestions = Math.floor(Math.random() * 50)
-        const dayAccuracy = Math.floor(Math.random() * 50) + 50
+        // 获取当天的游戏记录
+        const dayGames = gameHistory.filter(game => {
+          const gameDate = new Date(game.timestamp)
+          return gameDate.toDateString() === date.toDateString()
+        })
         
-        games.push(dayGames)
-        questions.push(dayQuestions)
+        const dayGamesCount = dayGames.length
+        const correctCount = dayGames.filter(game => game.isCorrect).length
+        const dayAccuracy = dayGamesCount > 0 ? Math.round((correctCount / dayGamesCount) * 100) : 0
+        
+        games.push(dayGamesCount)
+        questions.push(dayGamesCount) // 假设每局游戏1题
         accuracy.push(dayAccuracy)
       }
       
@@ -623,7 +669,16 @@ export default {
     
     getTimeDistributionData() {
       const labels = ['周一', '周二', '周三', '周四', '周五', '周六', '周日']
-      const data = labels.map(() => Math.floor(Math.random() * 30) + 5)
+      const data = new Array(7).fill(0)
+      
+      const gameHistory = this.userData?.gameHistory || []
+      gameHistory.forEach(game => {
+        const gameDate = new Date(game.timestamp)
+        const dayOfWeek = gameDate.getDay() // 0-6，0表示周日
+        const adjustedDay = dayOfWeek === 0 ? 6 : dayOfWeek - 1 // 调整为0-6，0表示周一
+        data[adjustedDay] += 5 // 假设每局游戏5分钟
+      })
+      
       return { labels, data }
     },
     
@@ -635,6 +690,19 @@ export default {
       }
       
       return priorityMap[priority] || 'ℹ️ 未知'
+    },
+    
+    getAreaName(area) {
+      const areaMap = {
+        addition: '加法运算',
+        subtraction: '减法运算',
+        multiplication: '乘法运算',
+        division: '除法运算',
+        comparison: '比较大小',
+        matching: '数字匹配'
+      }
+      
+      return areaMap[area] || area
     },
     
     exportData() {
@@ -713,6 +781,7 @@ export default {
 .mode-section,
 .time-section,
 .goal-section,
+.skill-section,
 .suggestion-section,
 .export-section {
   margin-bottom: 30px;
@@ -724,6 +793,7 @@ export default {
 .mode-section h3,
 .time-section h3,
 .goal-section h3,
+.skill-section h3,
 .suggestion-section h3,
 .export-section h3 {
   font-size: 1.2rem;
@@ -1002,6 +1072,56 @@ export default {
   background: rgba(239, 68, 68, 0.2);
   transform: translateY(-2px);
   box-shadow: 0 4px 15px rgba(239, 68, 68, 0.3);
+}
+
+.skill-content {
+  display: grid;
+  gap: 20px;
+}
+
+.skill-item {
+  background: rgba(102, 126, 234, 0.05);
+  border: 1px solid rgba(102, 126, 234, 0.1);
+  border-radius: 12px;
+  padding: 15px;
+}
+
+.skill-title {
+  font-size: 1rem;
+  font-weight: 500;
+  color: #333;
+  margin-bottom: 10px;
+}
+
+.skill-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.skill-tag {
+  padding: 6px 12px;
+  border-radius: 16px;
+  font-size: 0.8rem;
+  font-weight: 500;
+}
+
+.skill-tag.strong {
+  background: rgba(82, 196, 26, 0.1);
+  color: #52c41a;
+  border: 1px solid rgba(82, 196, 26, 0.2);
+}
+
+.skill-tag.weak {
+  background: rgba(239, 68, 68, 0.1);
+  color: #ef4444;
+  border: 1px solid rgba(239, 68, 68, 0.2);
+}
+
+.skill-tag.empty {
+  background: rgba(156, 163, 175, 0.1);
+  color: #9ca3af;
+  border: 1px solid rgba(156, 163, 175, 0.2);
 }
 
 @media (max-width: 768px) {
