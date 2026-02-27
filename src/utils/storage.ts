@@ -527,18 +527,6 @@ class StorageManager {
       return false
     }
   }
-
-  private static backupData(): BackupData {
-    const users = this.getUsers()
-    const currentUser = this.getCurrentUser()
-    
-    return {
-      version: this.DATA_VERSION,
-      timestamp: new Date().toISOString(),
-      users: users,
-      currentUser: currentUser ? currentUser.id : null
-    }
-  }
 }
 
 export default StorageManager
