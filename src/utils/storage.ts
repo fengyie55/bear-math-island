@@ -1,17 +1,74 @@
-// 本地存储工具类
+interface UserStats {
+  totalGames: number
+  totalQuestions: number
+  totalCorrect: number
+  totalIncorrect: number
+  bestStreak: number
+  currentStreak: number
+  averageScore: number
+  totalStudyTime: number
+  favoriteNumbers: number[]
+  weakAreas: string[]
+  strongAreas: string[]
+  achievements: number
+  weeklyGoal: {
+    targetQuestions: number
+    currentQuestions: number
+    targetTime: number
+    currentTime: number
+  }
+}
+
+interface UserPreferences {
+  soundEnabled: boolean
+  musicEnabled: boolean
+  difficulty: string
+  theme: string
+}
+
+interface GameResult {
+  id: string
+  timestamp: string
+  gameType: string
+  level: string
+  questionText: string
+  questionItems: string[]
+  correctAnswer: number
+  userAnswer: number
+  isCorrect: boolean
+  score: number
+}
+
+interface User {
+  id: string
+  username: string
+  password: string
+  avatar: string
+  createdAt: string
+  updatedAt: string
+  lastActivity: string
+  stats: UserStats
+  preferences: UserPreferences
+  gameHistory: GameResult[]
+  dataVersion: string
+}
+
+interface BackupData {
+  version: string
+  timestamp: string
+  users: User[]
+  currentUser: string | null
+}
+
 class StorageManager {
-  // 用户数据存储键（包含版本信息，防止数据被覆盖）
   static USERS_KEY = 'bearMathIslandUsers_v1'
   static CURRENT_USER_KEY = 'bearMathIslandCurrentUser_v1'
   static DATA_VERSION = '1.0'
 
-  // 获取所有用户
-  static getUsers() {
+  static getUsers(): User[] {
     try {
-      // 首先尝试从新版本存储获取数据
       let users = localStorage.getItem(this.USERS_KEY)
       
-      // 如果新版本没有数据，尝试从旧版本迁移
       if (!users) {
         const oldVersions = ['bearMathIslandUsers']
         for (const oldKey of oldVersions) {
@@ -19,8 +76,7 @@ class StorageManager {
           if (oldData) {
             try {
               const migratedUsers = JSON.parse(oldData)
-              // 迁移数据到新版本格式
-              const updatedUsers = migratedUsers.map(user => this.migrateUser(user))
+              const updatedUsers = migratedUsers.map((user: any) => this.migrateUser(user))
               this.saveUsers(updatedUsers)
               console.log('用户数据成功迁移到新版本')
               users = JSON.stringify(updatedUsers)
@@ -39,10 +95,8 @@ class StorageManager {
     }
   }
 
-  // 用户数据迁移方法（处理不同版本的数据格式）
-  static migrateUser(user) {
-    // 确保用户数据包含所有必要的字段
-    const defaultStats = {
+  static migrateUser(user: any): User {
+    const defaultStats: UserStats = {
       totalGames: 0,
       totalQuestions: 0,
       totalCorrect: 0,
@@ -50,20 +104,20 @@ class StorageManager {
       bestStreak: 0,
       currentStreak: 0,
       averageScore: 0,
-      totalStudyTime: 0, // 总学习时间（分钟）
+      totalStudyTime: 0,
       favoriteNumbers: [],
-      weakAreas: [], // 薄弱环节
-      strongAreas: [], // 擅长领域
-      achievements: 0, // 解锁成就数量
-      weeklyGoal: { // 周目标
+      weakAreas: [],
+      strongAreas: [],
+      achievements: 0,
+      weeklyGoal: {
         targetQuestions: 100,
         currentQuestions: 0,
-        targetTime: 105, // 15分钟/天 * 7天
+        targetTime: 105,
         currentTime: 0
       }
     }
 
-    const defaultPreferences = {
+    const defaultPreferences: UserPreferences = {
       soundEnabled: true,
       musicEnabled: true,
       difficulty: 'easy',
@@ -85,8 +139,7 @@ class StorageManager {
     }
   }
 
-  // 保存用户列表
-  static saveUsers(users) {
+  static saveUsers(users: User[]): boolean {
     try {
       localStorage.setItem(this.USERS_KEY, JSON.stringify(users))
       return true
@@ -96,12 +149,13 @@ class StorageManager {
     }
   }
 
-  // 添加新用户
-  static addUser(user) {
+  static addUser(user: Partial<User>): boolean {
     const users = this.getUsers()
     users.push({
       id: Date.now().toString(),
-      ...user,
+      username: user.username || '未命名用户',
+      password: user.password || '',
+      avatar: user.avatar || '🐻',
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
       lastActivity: new Date().toISOString(),
@@ -113,7 +167,17 @@ class StorageManager {
         bestStreak: 0,
         currentStreak: 0,
         averageScore: 0,
-        favoriteNumbers: []
+        totalStudyTime: 0,
+        favoriteNumbers: [],
+        weakAreas: [],
+        strongAreas: [],
+        achievements: 0,
+        weeklyGoal: {
+          targetQuestions: 100,
+          currentQuestions: 0,
+          targetTime: 105,
+          currentTime: 0
+        }
       },
       preferences: {
         soundEnabled: true,
@@ -126,20 +190,17 @@ class StorageManager {
     return this.saveUsers(users)
   }
 
-  // 根据用户名查找用户
-  static findUserByUsername(username) {
+  static findUserByUsername(username: string): User | undefined {
     const users = this.getUsers()
     return users.find(user => user.username === username)
   }
 
-  // 根据ID查找用户
-  static findUserById(userId) {
+  static findUserById(userId: string): User | undefined {
     const users = this.getUsers()
     return users.find(user => user.id === userId)
   }
 
-  // 更新用户信息
-  static updateUser(userId, updates) {
+  static updateUser(userId: string, updates: Partial<User>): boolean {
     const users = this.getUsers()
     const index = users.findIndex(user => user.id === userId)
     
@@ -155,31 +216,27 @@ class StorageManager {
     return false
   }
 
-  // 记录游戏结果
-  static recordGameResult(userId, gameData) {
+  static recordGameResult(userId: string, gameData: Omit<GameResult, 'id' | 'timestamp'>): boolean {
     const user = this.findUserById(userId)
     if (!user) return false
 
-    const result = {
+    const result: GameResult = {
       id: Date.now().toString(),
       timestamp: new Date().toISOString(),
       ...gameData
     }
 
-    // 只保留最近100条游戏记录
     const gameHistory = [result, ...(user.gameHistory || [])].slice(0, 100)
     
-    // 更新统计数据
     const stats = {
       ...user.stats,
       totalGames: (user.stats.totalGames || 0) + 1,
       totalQuestions: (user.stats.totalQuestions || 0) + 1,
       totalCorrect: (user.stats.totalCorrect || 0) + (result.isCorrect ? 1 : 0),
       totalIncorrect: (user.stats.totalIncorrect || 0) + (result.isCorrect ? 0 : 1),
-      totalStudyTime: (user.stats.totalStudyTime || 0) + 5 // 假设每局游戏5分钟
+      totalStudyTime: (user.stats.totalStudyTime || 0) + 5
     }
 
-    // 更新连胜记录
     if (result.isCorrect) {
       stats.currentStreak = (user.stats.currentStreak || 0) + 1
       stats.bestStreak = Math.max(stats.bestStreak, stats.currentStreak)
@@ -187,11 +244,9 @@ class StorageManager {
       stats.currentStreak = 0
     }
 
-    // 计算平均得分
     const averageScore = stats.totalQuestions > 0 ? Math.round(stats.totalCorrect / stats.totalQuestions * 100) : 0
     stats.averageScore = averageScore
 
-    // 更新周目标
     const oneWeekAgo = new Date()
     oneWeekAgo.setDate(oneWeekAgo.getDate() - 7)
     const weeklyGames = gameHistory.filter(game => {
@@ -202,14 +257,12 @@ class StorageManager {
     stats.weeklyGoal = {
       targetQuestions: 100,
       currentQuestions: weeklyGames.length,
-      targetTime: 105, // 15分钟/天 * 7天
-      currentTime: weeklyGames.length * 5 // 假设每局游戏5分钟
+      targetTime: 105,
+      currentTime: weeklyGames.length * 5
     }
 
-    // 分析薄弱环节和擅长领域
     this.analyzeSkillAreas(stats, gameHistory)
 
-    // 更新最后活动时间
     const lastActivity = new Date().toISOString()
 
     return this.updateUser(userId, {
@@ -219,9 +272,8 @@ class StorageManager {
     })
   }
 
-  // 分析技能领域
-  static analyzeSkillAreas(stats, gameHistory) {
-    const areaStats = {
+  static analyzeSkillAreas(stats: UserStats, gameHistory: GameResult[]): void {
+    const areaStats: Record<string, { correct: number; total: number }> = {
       addition: { correct: 0, total: 0 },
       subtraction: { correct: 0, total: 0 },
       multiplication: { correct: 0, total: 0 },
@@ -240,8 +292,8 @@ class StorageManager {
       }
     })
 
-    const weakAreas = []
-    const strongAreas = []
+    const weakAreas: string[] = []
+    const strongAreas: string[] = []
 
     Object.entries(areaStats).forEach(([area, data]) => {
       if (data.total > 0) {
@@ -258,12 +310,11 @@ class StorageManager {
     stats.strongAreas = strongAreas
   }
 
-  // 获取当前登录用户
-  static getCurrentUser() {
+  static getCurrentUser(): User | null {
     try {
       const currentUserId = localStorage.getItem(this.CURRENT_USER_KEY)
       if (currentUserId) {
-        return this.findUserById(currentUserId)
+        return this.findUserById(currentUserId) || null
       }
       return null
     } catch (error) {
@@ -272,13 +323,11 @@ class StorageManager {
     }
   }
 
-  // 获取所有用户（用于排行榜）
-  static getAllUsers() {
+  static getAllUsers(): User[] {
     return this.getUsers()
   }
 
-  // 设置当前登录用户
-  static setCurrentUser(userId) {
+  static setCurrentUser(userId: string): boolean {
     try {
       localStorage.setItem(this.CURRENT_USER_KEY, userId)
       return true
@@ -288,8 +337,7 @@ class StorageManager {
     }
   }
 
-  // 清除当前登录用户
-  static clearCurrentUser() {
+  static clearCurrentUser(): boolean {
     try {
       localStorage.removeItem(this.CURRENT_USER_KEY)
       return true
@@ -299,12 +347,10 @@ class StorageManager {
     }
   }
 
-  // 删除用户
-  static deleteUser(userId) {
+  static deleteUser(userId: string): boolean {
     const users = this.getUsers()
     const filteredUsers = users.filter(user => user.id !== userId)
     
-    // 如果删除的是当前登录用户，清除登录状态
     if (this.getCurrentUser()?.id === userId) {
       this.clearCurrentUser()
     }
@@ -312,35 +358,43 @@ class StorageManager {
     return this.saveUsers(filteredUsers)
   }
 
-  // 验证用户密码
-  static validateUser(username, password) {
+  static validateUser(username: string, password: string): User | null {
     const user = this.findUserByUsername(username)
     if (!user) return null
     
     return user.password === password ? user : null
   }
 
-  // 获取用户统计信息
-  static getUserStats(userId) {
+  static getUserStats(userId: string): UserStats {
     const user = this.findUserById(userId)
     return user?.stats || {
       totalGames: 0,
+      totalQuestions: 0,
       totalCorrect: 0,
       totalIncorrect: 0,
       bestStreak: 0,
       currentStreak: 0,
-      favoriteNumbers: []
+      averageScore: 0,
+      totalStudyTime: 0,
+      favoriteNumbers: [],
+      weakAreas: [],
+      strongAreas: [],
+      achievements: 0,
+      weeklyGoal: {
+        targetQuestions: 100,
+        currentQuestions: 0,
+        targetTime: 105,
+        currentTime: 0
+      }
     }
   }
 
-  // 获取用户游戏历史
-  static getUserGameHistory(userId) {
+  static getUserGameHistory(userId: string): GameResult[] {
     const user = this.findUserById(userId)
     return user?.gameHistory || []
   }
 
-  // 导出用户数据
-  static exportUserData(userId) {
+  static exportUserData(userId: string): Partial<User> | null {
     const user = this.findUserById(userId)
     if (!user) return null
 
@@ -356,23 +410,20 @@ class StorageManager {
     }
   }
 
-  // 数据备份功能
-  static backupData() {
+  static backupData(): BackupData | null {
     try {
       const users = this.getUsers()
       const currentUser = this.getCurrentUser()
       
-      const backupData = {
+      const backupData: BackupData = {
         version: this.DATA_VERSION,
         timestamp: new Date().toISOString(),
         users: users,
         currentUser: currentUser ? currentUser.id : null
       }
       
-      // 备份到本地存储（可以进一步扩展到云端备份）
       localStorage.setItem(`bearMathIslandBackup_${Date.now()}`, JSON.stringify(backupData))
       
-      // 只保留最近5个备份
       this.cleanupOldBackups()
       
       return backupData
@@ -382,8 +433,7 @@ class StorageManager {
     }
   }
 
-  // 恢复数据功能
-  static restoreData(backupData) {
+  static restoreData(backupData: BackupData): boolean {
     try {
       if (backupData.version !== this.DATA_VERSION) {
         console.warn('数据版本不匹配，尝试迁移')
@@ -403,15 +453,14 @@ class StorageManager {
     }
   }
 
-  // 获取所有备份
-  static getBackups() {
+  static getBackups(): Array<{ timestamp: string; version: string; userCount: number; key: string }> {
     try {
-      const backups = []
+      const backups: Array<{ timestamp: string; version: string; userCount: number; key: string }> = []
       for (let i = 0; i < localStorage.length; i++) {
         const key = localStorage.key(i)
-        if (key.startsWith('bearMathIslandBackup_')) {
+        if (key && key.startsWith('bearMathIslandBackup_')) {
           try {
-            const data = JSON.parse(localStorage.getItem(key))
+            const data = JSON.parse(localStorage.getItem(key) || '{}')
             backups.push({
               timestamp: data.timestamp,
               version: data.version,
@@ -424,16 +473,14 @@ class StorageManager {
         }
       }
       
-      // 按时间倒序排列
-      return backups.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))
+      return backups.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
     } catch (error) {
       console.error('Failed to get backups:', error)
       return []
     }
   }
 
-  // 清理旧备份
-  static cleanupOldBackups() {
+  static cleanupOldBackups(): void {
     try {
       const backups = this.getBackups()
       if (backups.length > 5) {
@@ -447,13 +494,12 @@ class StorageManager {
     }
   }
 
-  // 导出数据为JSON字符串
-  static exportData() {
-    return JSON.stringify(this.backupData(), null, 2)
+  static exportData(): string {
+    const backupData = this.backupData()
+    return JSON.stringify(backupData, null, 2)
   }
 
-  // 从JSON字符串导入数据
-  static importData(jsonString) {
+  static importData(jsonString: string): boolean {
     try {
       const backupData = JSON.parse(jsonString)
       return this.restoreData(backupData)
@@ -463,16 +509,14 @@ class StorageManager {
     }
   }
 
-  // 清除所有数据（用于调试）
-  static clearAllData() {
+  static clearAllData(): boolean {
     try {
       localStorage.removeItem(this.USERS_KEY)
       localStorage.removeItem(this.CURRENT_USER_KEY)
       
-      // 清除所有备份
       for (let i = 0; i < localStorage.length; i++) {
         const key = localStorage.key(i)
-        if (key.startsWith('bearMathIslandBackup_')) {
+        if (key && key.startsWith('bearMathIslandBackup_')) {
           localStorage.removeItem(key)
         }
       }
@@ -481,6 +525,18 @@ class StorageManager {
     } catch (error) {
       console.error('Failed to clear all data:', error)
       return false
+    }
+  }
+
+  private static backupData(): BackupData {
+    const users = this.getUsers()
+    const currentUser = this.getCurrentUser()
+    
+    return {
+      version: this.DATA_VERSION,
+      timestamp: new Date().toISOString(),
+      users: users,
+      currentUser: currentUser ? currentUser.id : null
     }
   }
 }
