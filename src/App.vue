@@ -15,7 +15,9 @@
             | 游戏: {{ currentUser.stats?.totalGames || 0 }}
           </span>
         </div>
-        <div class="header-actions">
+        
+        <!-- 桌面端导航 -->
+        <div class="header-actions desktop-nav">
           <button class="btn-profile" @click="toggleProfile">
             {{ showProfile ? '游戏' : '个人信息' }}
           </button>
@@ -31,6 +33,30 @@
           <button class="btn-logout" @click="handleLogout">
             退出
           </button>
+        </div>
+        
+        <!-- 移动端导航 -->
+        <div class="mobile-nav">
+          <button class="btn-menu" @click="toggleMobileMenu">
+            ☰ 菜单
+          </button>
+          <div v-if="showMobileMenu" class="mobile-menu">
+            <button class="mobile-menu-btn" @click="toggleProfile; toggleMobileMenu">
+              {{ showProfile ? '游戏' : '个人信息' }}
+            </button>
+            <button class="mobile-menu-btn" @click="toggleMonitor; toggleMobileMenu">
+              {{ showMonitor ? '游戏' : '家长监控' }}
+            </button>
+            <button class="mobile-menu-btn" @click="toggleLeaderboard; toggleMobileMenu">
+              {{ showLeaderboard ? '游戏' : '排行榜' }}
+            </button>
+            <button class="mobile-menu-btn" @click="toggleAchievement; toggleMobileMenu">
+              {{ showAchievement ? '游戏' : '成就' }}
+            </button>
+            <button class="mobile-menu-btn logout" @click="handleLogout; toggleMobileMenu">
+              退出
+            </button>
+          </div>
         </div>
       </div>
       
@@ -78,7 +104,7 @@ import UserProfile from './components/UserProfile.vue'
 import ParentMonitor from './components/ParentMonitor.vue'
 import Leaderboard from './components/Leaderboard.vue'
 import Achievement from './components/Achievement.vue'
-import StorageManager from './utils/storage'
+import StorageManager from './utils/storage.ts'
 
 export default {
   name: 'App',
@@ -98,7 +124,8 @@ export default {
       showProfile: false,
       showMonitor: false,
       showLeaderboard: false,
-      showAchievement: false
+      showAchievement: false,
+      showMobileMenu: false
     }
   },
   
@@ -157,6 +184,10 @@ export default {
       this.showProfile = false
       this.showMonitor = false
       this.showLeaderboard = false
+    },
+    
+    toggleMobileMenu() {
+      this.showMobileMenu = !this.showMobileMenu
     },
     
     resetData() {
@@ -263,6 +294,72 @@ body {
 .header-actions {
   display: flex;
   gap: 8px;
+}
+
+/* 桌面端导航 */
+.desktop-nav {
+  display: flex;
+  gap: 8px;
+}
+
+/* 移动端导航 */
+.mobile-nav {
+  display: none;
+  position: relative;
+}
+
+.btn-menu {
+  padding: 8px 16px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  background: white;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: all 0.3s ease;
+}
+
+.btn-menu:hover {
+  background: #f0f0f0;
+  transform: scale(1.05);
+}
+
+.mobile-menu {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  background: white;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  z-index: 1000;
+  min-width: 180px;
+  margin-top: 5px;
+}
+
+.mobile-menu-btn {
+  display: block;
+  width: 100%;
+  padding: 10px 15px;
+  text-align: left;
+  border: none;
+  background: white;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: background-color 0.2s ease;
+}
+
+.mobile-menu-btn:hover {
+  background: #f5f5f5;
+}
+
+.mobile-menu-btn.logout {
+  color: #ff4d4f;
+  border-top: 1px solid #eee;
+  margin-top: 5px;
+}
+
+.mobile-menu-btn.logout:hover {
+  background: #fff1f0;
 }
 
 .btn-profile,
@@ -392,6 +489,7 @@ body {
     flex-direction: column;
     gap: 10px;
     text-align: center;
+    height: auto;
   }
   
   .user-info {
@@ -402,6 +500,15 @@ body {
   .user-stats {
     font-size: 0.8rem;
   }
+  
+  /* 隐藏桌面端导航，显示移动端导航 */
+  .desktop-nav {
+    display: none;
+  }
+  
+  .mobile-nav {
+    display: block;
+  }
 }
 
 @media (max-width: 480px) {
@@ -409,10 +516,23 @@ body {
     font-size: 12px;
   }
   
-  .btn-profile,
-  .btn-logout {
-    padding: 6px 12px;
-    font-size: 0.8rem;
+  .user-header {
+    padding: 8px 12px;
+  }
+  
+  .user-avatar {
+    width: 32px;
+    height: 32px;
+    font-size: 1.1rem;
+  }
+  
+  .mobile-menu {
+    min-width: 160px;
+  }
+  
+  .mobile-menu-btn {
+    padding: 8px 12px;
+    font-size: 0.85rem;
   }
 }
 </style>
