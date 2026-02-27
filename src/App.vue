@@ -205,17 +205,18 @@ body {
 /* 内容区域 */
 .content {
   flex: 1;
-  overflow: hidden;
+  overflow-y: auto;
   position: relative;
+  padding: 0 15px 15px;
 }
 
 .profile-content,
 .game-content {
   width: 100%;
-  height: 100%;
-  overflow-y: auto;
-  overflow-x: hidden;
-  padding: 10px;
+  min-height: 100%;
+  display: flex;
+  flex-direction: column;
+  padding-top: 10px;
 }
 
 /* 全局滚动条样式 */
