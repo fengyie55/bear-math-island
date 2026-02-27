@@ -523,6 +523,31 @@ export default {
         state.wrongAnswers++
         state.feedbackText = '没关系，我们再一起数一数！😊'
       }
+
+      // 记录游戏结果
+      recordGameResult(isCorrect, option)
+    }
+
+    const recordGameResult = (isCorrect, userAnswer) => {
+      // 获取当前登录用户
+      const StorageManager = require('../utils/storage').default
+      const currentUser = StorageManager.getCurrentUser()
+      
+      if (currentUser) {
+        const gameData = {
+          gameType: state.selectedMode === 'adventure' ? 'adventure' : 'practice',
+          level: state.selectedMode === 'adventure' ? state.currentArea : state.currentLevel,
+          questionText: state.currentQuestion.text,
+          questionItems: state.currentQuestion.items,
+          correctAnswer: state.currentQuestion.answer,
+          userAnswer: userAnswer,
+          isCorrect: isCorrect,
+          score: isCorrect ? 10 : 0,
+          timestamp: new Date().toISOString()
+        }
+
+        StorageManager.recordGameResult(currentUser.id, gameData)
+      }
     }
 
     const nextQuestion = () => {
@@ -656,37 +681,47 @@ export default {
 
 <style scoped>
 .game-ui-container {
-  min-height: 100vh;
+  height: 100%;
+  min-height: 100%;
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  padding: 20px;
+  padding: 10px;
   color: white;
+  overflow: hidden;
 }
 
 .main-screen {
   max-width: 1200px;
   margin: 0 auto;
   text-align: center;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
 }
 
 .mode-selection {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: 30px;
-  margin-bottom: 40px;
+  gap: 20px;
+  margin-bottom: 25px;
   max-width: 800px;
   margin-left: auto;
   margin-right: auto;
+  flex: 1;
 }
 
 .mode-card {
   background: rgba(255,255,255,0.1);
-  border-radius: 20px;
-  padding: 30px;
+  border-radius: 16px;
+  padding: 20px;
   text-align: center;
   cursor: pointer;
   transition: all 0.3s ease;
   backdrop-filter: blur(10px);
   border: 2px solid transparent;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-height: 200px;
 }
 
 .mode-card:hover {
@@ -696,22 +731,22 @@ export default {
 }
 
 .mode-icon {
-  font-size: 4rem;
-  margin-bottom: 20px;
+  font-size: 3rem;
+  margin-bottom: 15px;
 }
 
 .mode-title {
-  font-size: 1.5rem;
+  font-size: 1.3rem;
   font-weight: bold;
   margin-bottom: 10px;
   color: white;
 }
 
 .mode-description {
-  font-size: 0.9rem;
+  font-size: 0.85rem;
   color: rgba(255,255,255,0.8);
   line-height: 1.4;
-  margin-bottom: 20px;
+  margin-bottom: 15px;
 }
 
 .mode-content-header {
@@ -1000,6 +1035,9 @@ export default {
 .game-screen {
   max-width: 800px;
   margin: 0 auto;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
 }
 
 .game-status {
@@ -1007,43 +1045,48 @@ export default {
   justify-content: space-between;
   align-items: center;
   background: rgba(255,255,255,0.1);
-  padding: 15px 20px;
-  border-radius: 15px;
-  margin-bottom: 20px;
+  padding: 10px 15px;
+  border-radius: 12px;
+  margin-bottom: 15px;
+  flex-shrink: 0;
 }
 
 .area-indicator {
   font-weight: bold;
-  font-size: 1.1rem;
+  font-size: 1rem;
 }
 
 .question-progress {
-  font-size: 1.2rem;
+  font-size: 1rem;
   font-weight: bold;
 }
 
 .stars-count {
-  font-size: 1.2rem;
+  font-size: 1rem;
   font-weight: bold;
 }
 
 .question-container {
   background: rgba(255,255,255,0.1);
-  border-radius: 20px;
-  padding: 30px;
+  border-radius: 16px;
+  padding: 20px;
   backdrop-filter: blur(10px);
-  margin-bottom: 20px;
+  margin-bottom: 15px;
+  flex: 1;
+  overflow-y: auto;
+  min-height: 0;
 }
 
 .question-text {
-  font-size: 1.5rem;
+  font-size: 1.2rem;
   text-align: center;
-  margin-bottom: 30px;
+  margin-bottom: 20px;
   line-height: 1.4;
+  word-wrap: break-word;
 }
 
 .question-visual {
-  margin-bottom: 30px;
+  margin-bottom: 20px;
 }
 
 .question-items {
@@ -1051,11 +1094,11 @@ export default {
   justify-content: center;
   gap: 10px;
   flex-wrap: wrap;
-  min-height: 100px;
+  min-height: 80px;
 }
 
 .question-item {
-  font-size: 3rem;
+  font-size: 2.5rem;
   cursor: pointer;
   transition: transform 0.3s ease;
 }
@@ -1070,23 +1113,23 @@ export default {
 }
 
 .answer-area {
-  margin-bottom: 20px;
+  margin-bottom: 15px;
 }
 
 .answer-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: 20px;
+  gap: 15px;
   max-width: 300px;
   margin: 0 auto;
 }
 
 .answer-option {
   background: rgba(255,255,255,0.2);
-  padding: 20px;
-  border-radius: 15px;
+  padding: 15px;
+  border-radius: 12px;
   text-align: center;
-  font-size: 1.5rem;
+  font-size: 1.3rem;
   font-weight: bold;
   cursor: pointer;
   transition: all 0.3s ease;
@@ -1104,11 +1147,11 @@ export default {
 
 .voice-button {
   background: rgba(255,255,255,0.1);
-  padding: 12px 24px;
-  border-radius: 25px;
+  padding: 10px 20px;
+  border-radius: 20px;
   cursor: pointer;
   text-align: center;
-  margin: 20px 0;
+  margin: 15px 0;
   transition: background 0.3s ease;
 }
 
@@ -1118,15 +1161,16 @@ export default {
 
 .question-progress-bar {
   background: rgba(255,255,255,0.1);
-  border-radius: 15px;
-  padding: 10px;
+  border-radius: 12px;
+  padding: 8px;
+  flex-shrink: 0;
 }
 
 .progress-container {
   width: 100%;
-  height: 15px;
+  height: 10px;
   background: rgba(255,255,255,0.3);
-  border-radius: 8px;
+  border-radius: 5px;
   overflow: hidden;
 }
 
