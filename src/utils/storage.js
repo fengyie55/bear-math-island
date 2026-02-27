@@ -44,10 +44,12 @@ class StorageManager {
     // 确保用户数据包含所有必要的字段
     const defaultStats = {
       totalGames: 0,
+      totalQuestions: 0,
       totalCorrect: 0,
       totalIncorrect: 0,
       bestStreak: 0,
       currentStreak: 0,
+      averageScore: 0,
       favoriteNumbers: []
     }
 
@@ -65,6 +67,7 @@ class StorageManager {
       avatar: user.avatar || '🐻',
       createdAt: user.createdAt || new Date().toISOString(),
       updatedAt: user.updatedAt || new Date().toISOString(),
+      lastActivity: user.lastActivity || new Date().toISOString(),
       stats: { ...defaultStats, ...user.stats },
       preferences: { ...defaultPreferences, ...user.preferences },
       gameHistory: user.gameHistory || [],
@@ -91,12 +94,15 @@ class StorageManager {
       ...user,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
+      lastActivity: new Date().toISOString(),
       stats: {
         totalGames: 0,
+        totalQuestions: 0,
         totalCorrect: 0,
         totalIncorrect: 0,
         bestStreak: 0,
         currentStreak: 0,
+        averageScore: 0,
         favoriteNumbers: []
       },
       preferences: {
@@ -157,6 +163,7 @@ class StorageManager {
     const stats = {
       ...user.stats,
       totalGames: (user.stats.totalGames || 0) + 1,
+      totalQuestions: (user.stats.totalQuestions || 0) + 1,
       totalCorrect: (user.stats.totalCorrect || 0) + (result.isCorrect ? 1 : 0),
       totalIncorrect: (user.stats.totalIncorrect || 0) + (result.isCorrect ? 0 : 1)
     }
@@ -169,9 +176,17 @@ class StorageManager {
       stats.currentStreak = 0
     }
 
+    // 计算平均得分
+    const averageScore = stats.totalQuestions > 0 ? Math.round(stats.totalCorrect / stats.totalQuestions * 100) : 0
+    stats.averageScore = averageScore
+
+    // 更新最后活动时间
+    const lastActivity = new Date().toISOString()
+
     return this.updateUser(userId, {
       gameHistory,
-      stats
+      stats,
+      lastActivity
     })
   }
 

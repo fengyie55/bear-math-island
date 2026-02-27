@@ -19,6 +19,9 @@
           <button class="btn-profile" @click="toggleProfile">
             {{ showProfile ? '游戏' : '个人信息' }}
           </button>
+          <button class="btn-monitor" @click="toggleMonitor">
+            {{ showMonitor ? '游戏' : '家长监控' }}
+          </button>
           <button class="btn-logout" @click="handleLogout">
             退出
           </button>
@@ -35,6 +38,14 @@
           />
         </div>
         
+        <!-- 家长监控页面 -->
+        <div v-else-if="showMonitor" class="monitor-content">
+          <ParentMonitor 
+            :currentUser="currentUser" 
+            @reset-data="resetData"
+          />
+        </div>
+        
         <!-- 游戏界面 -->
         <div v-else class="game-content">
           <GameUI />
@@ -48,6 +59,7 @@
 import GameUI from './components/GameUI.vue'
 import UserLogin from './components/UserLogin.vue'
 import UserProfile from './components/UserProfile.vue'
+import ParentMonitor from './components/ParentMonitor.vue'
 import StorageManager from './utils/storage'
 
 export default {
@@ -56,13 +68,15 @@ export default {
   components: {
     GameUI,
     UserLogin,
-    UserProfile
+    UserProfile,
+    ParentMonitor
   },
   
   data() {
     return {
       currentUser: null,
-      showProfile: false
+      showProfile: false,
+      showMonitor: false
     }
   },
   
@@ -94,6 +108,34 @@ export default {
     
     toggleProfile() {
       this.showProfile = !this.showProfile
+      this.showMonitor = false
+    },
+    
+    toggleMonitor() {
+      this.showMonitor = !this.showMonitor
+      this.showProfile = false
+    },
+    
+    resetData() {
+      // 重置用户数据
+      this.currentUser = {
+        ...this.currentUser,
+        stats: {
+          totalGames: 0,
+          totalQuestions: 0,
+          totalCorrect: 0,
+          totalIncorrect: 0,
+          currentStreak: 0,
+          bestStreak: 0,
+          averageScore: 0
+        },
+        gameHistory: []
+      }
+      
+      StorageManager.updateUser(this.currentUser.id, {
+        stats: this.currentUser.stats,
+        gameHistory: []
+      })
     }
   }
 }
@@ -177,6 +219,7 @@ body {
 }
 
 .btn-profile,
+.btn-monitor,
 .btn-logout {
   padding: 6px 12px;
   border: 1px solid #ddd;
@@ -188,9 +231,19 @@ body {
 }
 
 .btn-profile:hover,
+.btn-monitor:hover,
 .btn-logout:hover {
   background: #f0f0f0;
   transform: scale(1.05);
+}
+
+.btn-monitor {
+  color: #52c41a;
+  border-color: #52c41a;
+}
+
+.btn-monitor:hover {
+  background: #f6ffed;
 }
 
 .btn-logout {
@@ -211,6 +264,7 @@ body {
 }
 
 .profile-content,
+.monitor-content,
 .game-content {
   width: 100%;
   min-height: 100%;
