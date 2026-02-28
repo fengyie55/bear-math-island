@@ -872,6 +872,15 @@ function makeDefaultProfile(id, name, avatar, age) {
 
 export default {
   name: 'GameUI',
+  components: {
+    MainScreen,
+    AdventureScreen,
+    PracticeScreen,
+    GameScreen,
+    FeedbackModal,
+    CompletionModal,
+    SettingsModal
+  },
   setup() {
     // ── 应用状态 ──
     const screen = ref('child-select')
