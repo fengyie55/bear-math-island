@@ -470,12 +470,17 @@ class StorageManager {
       localStorage.removeItem(this.CURRENT_USER_KEY)
       
       // 清除所有备份
+      const backupKeys = []
       for (let i = 0; i < localStorage.length; i++) {
         const key = localStorage.key(i)
-        if (key.startsWith('bearMathIslandBackup_')) {
-          localStorage.removeItem(key)
+        if (key && key.startsWith('bearMathIslandBackup_')) {
+          backupKeys.push(key)
         }
       }
+
+      backupKeys.forEach((key) => {
+        localStorage.removeItem(key)
+      })
       
       return true
     } catch (error) {
