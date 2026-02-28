@@ -59,7 +59,7 @@
             :class="{ active: newProfile.age === a }"
             @click="newProfile.age = a">{{ a }}岁</div>
         </div>
-        <button class="confirm-btn" @click="createProfile" :disabled="!newProfile.name.trim()">
+        <button class="confirm-btn" @click="createProfile" :disabled="!newProfile.name.trim()" aria-label="创建新档案">
           🎉 出发！
         </button>
       </div>
@@ -89,7 +89,7 @@
             ⏰ {{ remainingTimeStr }}
           </span>
         </div>
-        <button class="icon-btn" @click="showSettings = true">⚙️</button>
+        <button class="icon-btn" @click="showSettings = true" aria-label="打开设置">⚙️</button>
       </div>
 
       <!-- 海岛全景 -->
@@ -154,7 +154,7 @@
     <transition name="screen-fade">
     <div v-if="screen === 'practice'" class="practice-screen">
       <div class="page-header">
-        <button class="back-btn" @click="screen = 'main'">◀ 返回</button>
+        <button class="back-btn" @click="screen = 'main'" aria-label="返回主页">◀ 返回</button>
         <h2>📚 练习题库</h2>
         <div class="header-score">⭐ {{ currentProfile.totalScore }}</div>
       </div>
@@ -194,7 +194,7 @@
 
       <!-- 顶部 -->
       <div class="game-header">
-        <button class="back-btn ghost" @click="confirmExit">◀</button>
+        <button class="back-btn ghost" @click="confirmExit" aria-label="退出当前游戏">◀</button>
         <div class="game-progress-wrap">
           <div class="gp-label">{{ currentGameMode === 'adventure' ? currentAreaName : currentLevelName }}</div>
           <div class="gp-bar">
@@ -290,7 +290,7 @@
           </div><!-- end visual -->
 
           <!-- 语音按钮 -->
-          <button class="voice-fab" @click="speakQuestion">🔊</button>
+          <button class="voice-fab" @click="speakQuestion" aria-label="朗读当前题目">🔊</button>
         </div>
         </transition>
       </div>
@@ -302,7 +302,7 @@
           <button
             v-for="(opt, i) in currentQ.options"
             :key="i"
-            class="choice-btn"
+            class="choice-btn option-btn"
             :class="{
               'chosen': chosen === i,
               'correct': answered && opt === currentQ.answer,
@@ -310,6 +310,7 @@
             }"
             @click="pickAnswer(opt, i)"
             :disabled="answered"
+            :aria-label="`选项 ${i + 1}: ${typeof opt === 'object' ? opt.label : opt}`"
           >
             <span class="choice-emoji" v-if="opt.emoji">{{ opt.emoji }}</span>
             <span class="choice-val">{{ typeof opt === 'object' ? opt.label : opt }}</span>
@@ -321,10 +322,11 @@
           <button
             v-for="sym in ['＜', '＝', '＞']"
             :key="sym"
-            class="sym-btn"
+            class="sym-btn option-btn"
             :class="{ chosen: chosen === sym, correct: answered && sym === currentQ.answer, wrong: answered && chosen === sym && sym !== currentQ.answer }"
             @click="pickSymbol(sym)"
             :disabled="answered"
+            :aria-label="`选择符号 ${sym}`"
           >{{ sym }}</button>
         </div>
       </div>
@@ -334,7 +336,7 @@
       <div class="feedback-bar" v-if="answered" :class="lastCorrect ? 'fb-correct' : 'fb-wrong'">
         <div class="fb-emoji">{{ lastCorrect ? feedbackEmoji : '🤔' }}</div>
         <div class="fb-msg">{{ lastCorrect ? feedbackMsg : wrongMsg }}</div>
-        <button class="fb-next" @click="doNext">
+        <button class="fb-next" @click="doNext" aria-label="继续下一步">
           {{ qIndex + 1 >= totalQ ? '🎉 看结果' : (lastCorrect ? '下一题 ▶' : '再试试 💪') }}
         </button>
       </div>
@@ -375,8 +377,8 @@
           </div>
         </div>
         <div class="result-actions">
-          <button class="ra-btn primary" @click="playAgain">🔄 再玩一次</button>
-          <button class="ra-btn secondary" @click="returnHome">🏠 回主页</button>
+          <button class="ra-btn primary" @click="playAgain" aria-label="再玩一次">🔄 再玩一次</button>
+          <button class="ra-btn secondary" @click="returnHome" aria-label="返回主页">🏠 回主页</button>
         </div>
       </div>
     </div>
@@ -386,7 +388,7 @@
     <transition name="screen-fade">
     <div v-if="screen === 'achievements'" class="achievements-screen">
       <div class="page-header">
-        <button class="back-btn" @click="screen = 'main'">◀ 返回</button>
+        <button class="back-btn" @click="screen = 'main'" aria-label="返回主页">◀ 返回</button>
         <h2>🏅 成就</h2>
         <div class="ach-count">{{ unlockedCount }}/{{ allAchievements.length }}</div>
       </div>
@@ -410,7 +412,7 @@
     <transition name="screen-fade">
     <div v-if="screen === 'parent'" class="parent-screen">
       <div class="page-header">
-        <button class="back-btn" @click="screen = prevScreen || 'main'">◀ 返回</button>
+        <button class="back-btn" @click="screen = prevScreen || 'main'" aria-label="返回上一页">◀ 返回</button>
         <h2>👨‍👩‍👧 家长报告</h2>
         <div></div>
       </div>
@@ -505,7 +507,7 @@
             <label class="toggle"><input type="checkbox" v-model="settings.soundEffect"/><span class="slider"></span></label>
           </div>
         </div>
-        <button class="sm-save" @click="saveSettings">保存 ✓</button>
+        <button class="sm-save" @click="saveSettings" aria-label="保存设置">保存 ✓</button>
       </div>
     </div>
 
@@ -1919,21 +1921,28 @@ export default {
 .game-score-chip { background: rgba(255,215,0,0.3); border-radius: 16px; padding: 6px 12px; font-size: 1rem; font-weight: bold; border: 1px solid rgba(255,215,0,0.5); white-space: nowrap; }
 
 /* 题目区 */
-.question-zone { flex: 1; display: flex; align-items: flex-start; justify-content: center; padding: 14px 14px 0; }
+.question-zone {
+  flex: 1;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 16px 16px 0;
+  margin-bottom: 32px;
+}
 
 .question-card {
-  background: rgba(255,255,255,0.18);
-  backdrop-filter: blur(14px);
-  border-radius: 26px;
-  padding: 20px;
+  background: #ffffff;
+  color: #1A1A1A;
+  border-radius: 16px;
+  padding: 32px;
   width: 100%;
   max-width: 600px;
-  border: 1px solid rgba(255,255,255,0.35);
-  box-shadow: 0 8px 32px rgba(0,0,0,0.12);
+  border: 1px solid #f0f0f0;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.08);
   position: relative;
 }
 .question-card.shake { animation: shake 0.55s ease; }
-@keyframes shake { 0%,100%{transform:translateX(0)} 20%{transform:translateX(-10px)} 40%{transform:translateX(10px)} 60%{transform:translateX(-6px)} 80%{transform:translateX(6px)} }
+@keyframes shake { 0%,100% { transform: translateX(0); } 25% { transform: translateX(-5px); } 75% { transform: translateX(5px); } }
 
 /* 故事情境 */
 .story-context {
@@ -1946,11 +1955,11 @@ export default {
 .story-text { font-size: 0.95rem; line-height: 1.5; opacity: 0.95; }
 
 .q-text {
-  font-size: 1.8rem;
-  font-weight: 900;
+  font-size: 36px;
+  font-weight: 600;
+  color: #1A1A1A;
   text-align: center;
-  margin-bottom: 14px;
-  text-shadow: 0 2px 8px rgba(0,0,0,0.15);
+  margin-bottom: 16px;
 }
 
 /* 视觉辅助 */
@@ -2004,64 +2013,62 @@ export default {
 
 .voice-fab {
   position: absolute;
-  bottom: 14px; right: 14px;
-  background: rgba(255,255,255,0.25);
+  bottom: 16px;
+  right: 16px;
+  background: #f5f5f5;
   border: none;
   border-radius: 50%;
   width: 38px; height: 38px;
   font-size: 1.1rem;
+  color: #1a1a1a;
   cursor: pointer;
   display: flex; align-items: center; justify-content: center;
   transition: all 0.2s;
 }
-.voice-fab:hover { background: rgba(255,255,255,0.45); transform: scale(1.1); }
+.voice-fab:hover { background: #eaeaea; transform: scale(1.1); }
 
 /* 答案区 */
-.answer-zone { padding: 14px; }
+.answer-zone { padding: 0 16px 16px; }
 
-.choice-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; max-width: 600px; margin: 0 auto; }
-.choice-btn {
-  background: rgba(255,255,255,0.22);
-  border: 2px solid rgba(255,255,255,0.4);
-  border-radius: 18px;
+.choice-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; max-width: 600px; margin: 0 auto; }
+.option-btn {
+  background: #ffffff;
+  border: 2px solid #E5E5E5;
+  border-radius: 12px;
   padding: 18px 12px;
-  font-size: 1.8rem;
-  font-weight: bold;
-  color: white;
+  font-size: 24px;
+  font-weight: 600;
+  color: #1A1A1A;
   cursor: pointer;
-  transition: all 0.25s cubic-bezier(0.34,1.56,0.64,1);
+  transition: all 0.2s ease;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 4px;
+  gap: 8px;
 }
-.choice-btn:hover:not(:disabled) { background: rgba(255,255,255,0.38); transform: scale(1.05); }
-.choice-btn.chosen { background: rgba(255,255,100,0.3); border-color: #FFD700; transform: scale(1.04); }
-.choice-btn.correct { background: rgba(80,200,80,0.6) !important; border-color: #4ade80 !important; animation: correctPop 0.5s ease; }
-.choice-btn.wrong { background: rgba(255,80,80,0.5) !important; border-color: #f87171 !important; }
-@keyframes correctPop { 0%{transform:scale(1)} 50%{transform:scale(1.12)} 100%{transform:scale(1.05)} }
+.option-btn:hover:not(:disabled) { border-color: #6BCB77; }
+.choice-btn.chosen,
+.sym-btn.chosen { border-color: #6BCB77; box-shadow: 0 0 0 2px rgba(107, 203, 119, 0.16); }
+.option-btn.correct { background: #6BCB77 !important; border-color: #6BCB77 !important; color: #ffffff; animation: pop 0.3s ease; }
+.option-btn.wrong { background: #FF6B6B !important; border-color: #FF6B6B !important; color: #ffffff; }
+@keyframes pop { 0% { transform: scale(1); } 50% { transform: scale(1.08); } 100% { transform: scale(1); } }
 .choice-btn:disabled { cursor: default; }
 .choice-emoji { font-size: 1.2rem; }
-.choice-val { font-size: 2rem; }
+.choice-val { font-size: 2rem; line-height: 1.2; }
 
 /* 符号选择 */
 .symbol-choice { display: flex; gap: 16px; justify-content: center; }
 .sym-btn {
-  background: rgba(255,255,255,0.22);
-  border: 2px solid rgba(255,255,255,0.4);
-  border-radius: 18px;
   width: 80px; height: 80px;
   font-size: 2.2rem;
-  font-weight: bold;
-  color: white;
-  cursor: pointer;
-  transition: all 0.25s cubic-bezier(0.34,1.56,0.64,1);
+  font-weight: 700;
   display: flex; align-items: center; justify-content: center;
 }
-.sym-btn:hover:not(:disabled) { background: rgba(255,255,255,0.38); transform: scale(1.1); }
-.sym-btn.chosen { background: rgba(255,255,100,0.3); border-color: #FFD700; }
-.sym-btn.correct { background: rgba(80,200,80,0.6) !important; border-color: #4ade80 !important; }
-.sym-btn.wrong { background: rgba(255,80,80,0.5) !important; border-color: #f87171 !important; }
+
+button:focus-visible {
+  outline: 3px solid #1f6feb;
+  outline-offset: 2px;
+}
 
 /* 反馈栏 */
 .feedback-bar {
@@ -2245,7 +2252,6 @@ export default {
   .ach-grid { grid-template-columns: repeat(2,1fr); }
   .pr-cards { grid-template-columns: repeat(2,1fr); }
   .choice-btn { font-size: 1.5rem; padding: 14px 8px; }
-  .q-text { font-size: 1.5rem; }
   .hero-title { font-size: 2rem; }
   .main-actions { grid-template-columns: repeat(2,1fr); }
   .spot-orchard { left: 4%; }
