@@ -1,402 +1,280 @@
 <template>
   <div class="game-screen">
-    <div class="game-status">
-      <div class="status-left">
-        <button class="back-button" @click="backToMode">← 返回模式选择</button>
-      </div>
-      <div class="status-center">
-        <div class="question-progress">
-          {{ currentQuestionIndex }}/{{ totalQuestionsPerLevel }}
-        </div>
-      </div>
-      <div class="status-right">
-        <div class="stars-count">
-          {{ currentScore }} ⭐
-        </div>
-      </div>
+    <div class="header">
+      <button class="back-button" @click="goBack">← 返回</button>
+      <h1>{{ game.currentMode === 'adventure' ? '冒险模式' : '练习模式' }}</h1>
+      <div class="score">分数: {{ game.score }}</div>
     </div>
-
-    <div class="question-container">
-      <div class="question-text">
-        {{ currentQuestion.text }}
+    
+    <div class="game-content">
+      <div class="question-container">
+        <h2 class="question-number">第 {{ game.totalQuestions + 1 }} 题</h2>
+        <div class="question">{{ game.currentQuestion?.question }}</div>
+        <div class="visual-aid" v-if="game.currentQuestion?.visualAid">
+          <img :src="game.currentQuestion.visualAid" alt="视觉辅助">
+        </div>
+        <div class="input-container">
+          <input 
+            type="number" 
+            v-model="game.userAnswer" 
+            @keyup.enter="submitAnswer"
+            placeholder="请输入答案"
+            class="answer-input"
+            ref="answerInput"
+          >
+          <button class="submit-button" @click="submitAnswer">提交</button>
+        </div>
       </div>
       
-      <div class="question-visual">
-        <div class="question-items">
-          <div 
-            v-for="(item, index) in currentQuestion.items" 
-            :key="index"
-            class="question-item"
-            @click="selectItem(item)"
-            :class="{ 'selected': selectedItems.includes(item) }"
-          >
-            {{ item }}
-          </div>
-        </div>
-      </div>
-
-      <div class="answer-area">
-        <div class="answer-grid">
-          <div 
-            v-for="(option, index) in currentQuestion.options" 
-            :key="index"
-            class="answer-option"
-            @click="selectAnswer(option)"
-            :class="{ 'selected': selectedOption === index }"
-          >
-            {{ option }}
-          </div>
-        </div>
-      </div>
-
-      <div class="voice-button" @click="playQuestionVoice">
-        🔊 听一听
-      </div>
-    </div>
-
-    <div class="question-progress-bar">
-      <div class="progress-container">
-        <div class="progress-fill" :style="{ width: progressPercentage + '%' }"></div>
+      <div class="progress-bar">
+        <div 
+          class="progress-fill" 
+          :style="{ width: progressPercentage + '%' }"
+        ></div>
       </div>
     </div>
   </div>
 </template>
 
-<script>
-import { computed } from 'vue'
+<script setup>
+import { ref, computed, onMounted, watch } from 'vue'
+import { useGameStore } from '../stores/gameStore'
+import { useSettingsStore } from '../stores/settingsStore'
 
-export default {
-  name: 'GameScreen',
-  props: {
-    currentQuestion: {
-      type: Object,
-      default: () => ({
-        text: '',
-        items: [],
-        answer: 0,
-        options: []
-      })
-    },
-    currentQuestionIndex: {
-      type: Number,
-      default: 0
-    },
-    currentScore: {
-      type: Number,
-      default: 0
-    },
-    totalQuestionsPerLevel: {
-      type: Number,
-      default: 5
-    },
-    selectedOption: {
-      type: Number,
-      default: null
-    },
-    selectedItems: {
-      type: Array,
-      default: () => []
-    },
-    voiceEnabled: {
-      type: Boolean,
-      default: true
-    }
-  },
-  emits: ['back-to-mode', 'select-answer', 'select-item', 'play-voice'],
-  setup(props, { emit }) {
-    const progressPercentage = computed(() => {
-      return Math.round((props.currentQuestionIndex / props.totalQuestionsPerLevel) * 100)
-    })
+const game = useGameStore()
+const settings = useSettingsStore()
+const answerInput = ref(null)
 
-    const backToMode = () => {
-      emit('back-to-mode')
-    }
+// 计算进度百分比
+const progressPercentage = computed(() => {
+  return game.totalQuestions > 0 ? (game.totalQuestions / 10) * 100 : 0
+})
 
-    const selectItem = (item) => {
-      emit('select-item', item)
-    }
-
-    const selectAnswer = (option) => {
-      emit('select-answer', option)
-    }
-
-    const playQuestionVoice = () => {
-      emit('play-voice')
-    }
-
-    return {
-      progressPercentage,
-      backToMode,
-      selectItem,
-      selectAnswer,
-      playQuestionVoice
-    }
+// 语音提示
+const speakQuestion = () => {
+  if (settings.voiceEnabled && game.currentQuestion) {
+    const speech = new SpeechSynthesisUtterance(game.currentQuestion.question)
+    speech.lang = 'zh-CN'
+    speech.rate = 1
+    speechSynthesis.speak(speech)
   }
 }
+
+// 播放音效
+const playSound = (type) => {
+  if (settings.soundEnabled) {
+    const audio = new Audio()
+    switch (type) {
+      case 'correct':
+        audio.src = 'data:audio/wav;base64,UklGRigAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQQAAAD'
+        break
+      case 'incorrect':
+        audio.src = 'data:audio/wav;base64,UklGRigAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQQAAAD'
+        break
+      case 'submit':
+        audio.src = 'data:audio/wav;base64,UklGRigAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQQAAAD'
+        break
+    }
+    audio.play().catch(e => console.log('Audio play failed:', e))
+  }
+}
+
+// 提交答案
+const submitAnswer = () => {
+  if (!game.currentQuestion || !game.userAnswer) return
+  
+  playSound('submit')
+  game.checkAnswer()
+  
+  // 记录答题情况到设置
+  settings.recordAnswer(game.feedbackCorrect)
+  
+  // 播放相应音效
+  playSound(game.feedbackCorrect ? 'correct' : 'incorrect')
+}
+
+// 返回
+const goBack = () => {
+  if (game.currentMode === 'adventure') {
+    game.setScreen('adventure')
+  } else {
+    game.setScreen('practice')
+  }
+}
+
+// 监听题目变化，播放语音提示
+watch(() => game.currentQuestion, (newQuestion) => {
+  if (newQuestion) {
+    speakQuestion()
+    // 聚焦到输入框
+    setTimeout(() => {
+      answerInput.value?.focus()
+    }, 100)
+  }
+}, { deep: true })
+
+// 组件挂载时
+onMounted(() => {
+  // 聚焦到输入框
+  setTimeout(() => {
+    answerInput.value?.focus()
+  }, 100)
+  
+  // 播放语音提示
+  speakQuestion()
+  
+  // 增加游戏次数
+  settings.addGamePlayed()
+})
 </script>
 
 <style scoped>
 .game-screen {
-  max-width: 800px;
-  margin: 0 auto;
-  height: 100%;
   display: flex;
   flex-direction: column;
-}
-
-.game-status {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  background: rgba(255,255,255,0.1);
-  padding: 10px 15px;
-  border-radius: 12px;
-  margin-bottom: 15px;
-  flex-shrink: 0;
-}
-
-.status-left {
-  flex: 1;
-}
-
-.status-center {
-  flex: 1;
-  text-align: center;
-}
-
-.status-right {
-  flex: 1;
-  text-align: right;
-}
-
-.question-progress {
-  font-size: 1rem;
-  font-weight: bold;
-}
-
-.stars-count {
-  font-size: 1rem;
-  font-weight: bold;
-}
-
-.question-container {
-  background: rgba(255,255,255,0.1);
-  border-radius: 16px;
+  min-height: 80vh;
   padding: 20px;
-  backdrop-filter: blur(10px);
-  margin-bottom: 15px;
-  flex: 1;
-  overflow-y: auto;
-  min-height: 0;
 }
 
-.question-text {
-  font-size: 1.2rem;
-  text-align: center;
-  margin-bottom: 20px;
-  line-height: 1.4;
-  word-wrap: break-word;
-}
-
-.question-visual {
-  margin-bottom: 20px;
-}
-
-.question-items {
+.header {
   display: flex;
-  justify-content: center;
-  gap: 10px;
-  flex-wrap: wrap;
-  min-height: 80px;
-}
-
-.question-item {
-  font-size: 2.5rem;
-  cursor: pointer;
-  transition: transform 0.3s ease;
-}
-
-.question-item:hover {
-  transform: scale(1.2);
-}
-
-.question-item.selected {
-  transform: scale(1.2);
-  color: #FFD700;
-}
-
-.answer-area {
-  margin-bottom: 15px;
-}
-
-.answer-grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 15px;
-  max-width: 300px;
-  margin: 0 auto;
-}
-
-.answer-option {
-  background: rgba(255,255,255,0.2);
-  padding: 15px;
-  border-radius: 12px;
-  text-align: center;
-  font-size: 1.3rem;
-  font-weight: bold;
-  cursor: pointer;
-  transition: all 0.3s ease;
-}
-
-.answer-option:hover {
-  background: rgba(255,255,255,0.3);
-  transform: scale(1.05);
-}
-
-.answer-option.selected {
-  background: linear-gradient(45deg, #4CAF50, #8BC34A);
-  transform: scale(1.1);
-}
-
-.voice-button {
-  background: rgba(255,255,255,0.1);
-  padding: 10px 20px;
-  border-radius: 20px;
-  cursor: pointer;
-  text-align: center;
-  margin: 15px 0;
-  transition: background 0.3s ease;
-}
-
-.voice-button:hover {
-  background: rgba(255,255,255,0.2);
-}
-
-.question-progress-bar {
-  background: rgba(255,255,255,0.1);
-  border-radius: 12px;
-  padding: 8px;
-  flex-shrink: 0;
-}
-
-.progress-container {
-  width: 100%;
-  height: 10px;
-  background: rgba(255,255,255,0.3);
-  border-radius: 5px;
-  overflow: hidden;
-}
-
-.progress-fill {
-  height: 100%;
-  background: linear-gradient(90deg, #4CAF50, #8BC34A);
-  border-radius: 5px;
-  transition: width 0.5s ease;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 30px;
+  color: white;
 }
 
 .back-button {
-  background: rgba(255,255,255,0.1);
+  background: rgba(255, 255, 255, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 5px;
   padding: 8px 16px;
-  border: none;
-  border-radius: 15px;
   color: white;
   cursor: pointer;
-  font-size: 0.9rem;
   transition: all 0.3s ease;
 }
 
 .back-button:hover {
-  background: rgba(255,255,255,0.2);
+  background: rgba(255, 255, 255, 0.3);
+}
+
+.header h1 {
+  font-size: 1.5rem;
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.score {
+  font-size: 1.2rem;
+  font-weight: bold;
+  background: rgba(255, 255, 255, 0.2);
+  padding: 8px 16px;
+  border-radius: 20px;
+}
+
+.game-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.question-container {
+  background: white;
+  border-radius: 15px;
+  padding: 30px;
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+  margin-bottom: 30px;
+  text-align: center;
+}
+
+.question-number {
+  color: #667eea;
+  margin-bottom: 20px;
+  font-size: 1.2rem;
+}
+
+.question {
+  font-size: 2rem;
+  font-weight: bold;
+  margin-bottom: 30px;
+  color: #333;
+}
+
+.visual-aid {
+  margin-bottom: 20px;
+  display: flex;
+  justify-content: center;
+}
+
+.visual-aid img {
+  max-width: 200px;
+  max-height: 150px;
+  border-radius: 10px;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+}
+
+.input-container {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  align-items: center;
+}
+
+.answer-input {
+  padding: 15px 20px;
+  border: 2px solid #667eea;
+  border-radius: 10px;
+  font-size: 1.5rem;
+  width: 200px;
+  text-align: center;
+}
+
+.submit-button {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border: none;
+  border-radius: 10px;
+  padding: 15px 30px;
+  font-size: 1.2rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.submit-button:hover {
+  transform: scale(1.05);
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+}
+
+.progress-bar {
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 10px;
+  height: 10px;
+  margin-top: auto;
+  overflow: hidden;
+}
+
+.progress-fill {
+  background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+  height: 100%;
+  transition: width 0.3s ease;
 }
 
 @media (max-width: 768px) {
-  .game-screen {
-    padding: 0 10px;
-  }
-  
-  .game-status {
-    padding: 8px 12px;
-    margin-bottom: 10px;
-  }
-  
-  .question-container {
-    padding: 15px;
-    margin-bottom: 10px;
-  }
-  
-  .question-text {
-    font-size: 1.1rem;
-    margin-bottom: 15px;
-  }
-  
-  .question-item {
-    font-size: 2rem;
-  }
-  
-  .answer-grid {
-    grid-template-columns: repeat(2, 1fr);
-    gap: 12px;
-    max-width: 100%;
-    padding: 0 10px;
-  }
-  
-  .answer-option {
-    padding: 12px;
+  .header h1 {
     font-size: 1.2rem;
   }
   
-  .voice-button {
-    padding: 8px 16px;
-    margin: 10px 0;
+  .question {
+    font-size: 1.5rem;
   }
   
-  .question-progress-bar {
-    padding: 6px;
+  .answer-input {
+    width: 150px;
+    font-size: 1.2rem;
   }
   
-  .back-button {
-    padding: 6px 12px;
-    font-size: 0.8rem;
-  }
-  
-  .question-progress {
-    font-size: 0.9rem;
-  }
-  
-  .stars-count {
-    font-size: 0.9rem;
-  }
-}
-
-@media (max-width: 480px) {
-  .question-text {
+  .submit-button {
+    padding: 12px 24px;
     font-size: 1rem;
-  }
-  
-  .question-item {
-    font-size: 1.8rem;
-  }
-  
-  .answer-option {
-    padding: 10px;
-    font-size: 1.1rem;
-  }
-  
-  .game-status {
-    flex-direction: column;
-    gap: 5px;
-    text-align: center;
-  }
-  
-  .status-left,
-  .status-center,
-  .status-right {
-    flex: none;
-  }
-  
-  .back-button {
-    width: 100%;
-    margin-bottom: 5px;
   }
 }
 </style>

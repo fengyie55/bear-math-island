@@ -1,4 +1,66 @@
-// 本地存储工具类
+// 存储键
+const STORAGE_KEYS = {
+  GAME_PROGRESS: 'bearMathIslandGameProgress_v1',
+  SETTINGS: 'bearMathIslandSettings_v1'
+}
+
+// 保存游戏进度
+export const saveGameProgress = (progress) => {
+  try {
+    localStorage.setItem(STORAGE_KEYS.GAME_PROGRESS, JSON.stringify(progress))
+    return true
+  } catch (error) {
+    console.error('保存游戏进度失败:', error)
+    return false
+  }
+}
+
+// 加载游戏进度
+export const loadGameProgress = () => {
+  try {
+    const progress = localStorage.getItem(STORAGE_KEYS.GAME_PROGRESS)
+    return progress ? JSON.parse(progress) : null
+  } catch (error) {
+    console.error('加载游戏进度失败:', error)
+    return null
+  }
+}
+
+// 保存设置
+export const saveSettings = (settings) => {
+  try {
+    localStorage.setItem(STORAGE_KEYS.SETTINGS, JSON.stringify(settings))
+    return true
+  } catch (error) {
+    console.error('保存设置失败:', error)
+    return false
+  }
+}
+
+// 加载设置
+export const loadSettings = () => {
+  try {
+    const settings = localStorage.getItem(STORAGE_KEYS.SETTINGS)
+    return settings ? JSON.parse(settings) : null
+  } catch (error) {
+    console.error('加载设置失败:', error)
+    return null
+  }
+}
+
+// 清除所有数据
+export const clearAllData = () => {
+  try {
+    localStorage.removeItem(STORAGE_KEYS.GAME_PROGRESS)
+    localStorage.removeItem(STORAGE_KEYS.SETTINGS)
+    return true
+  } catch (error) {
+    console.error('清除数据失败:', error)
+    return false
+  }
+}
+
+// 本地存储工具类（保留原有功能，用于用户管理等）
 class StorageManager {
   // 用户数据存储键（包含版本信息，防止数据被覆盖）
   static USERS_KEY = 'bearMathIslandUsers_v1'
@@ -361,12 +423,16 @@ class StorageManager {
     try {
       const users = this.getUsers()
       const currentUser = this.getCurrentUser()
+      const gameProgress = loadGameProgress()
+      const settings = loadSettings()
       
       const backupData = {
         version: this.DATA_VERSION,
         timestamp: new Date().toISOString(),
         users: users,
-        currentUser: currentUser ? currentUser.id : null
+        currentUser: currentUser ? currentUser.id : null,
+        gameProgress: gameProgress,
+        settings: settings
       }
       
       // 备份到本地存储（可以进一步扩展到云端备份）
@@ -394,6 +460,14 @@ class StorageManager {
       
       if (backupData.currentUser) {
         this.setCurrentUser(backupData.currentUser)
+      }
+      
+      if (backupData.gameProgress) {
+        saveGameProgress(backupData.gameProgress)
+      }
+      
+      if (backupData.settings) {
+        saveSettings(backupData.settings)
       }
       
       return true
@@ -468,6 +542,7 @@ class StorageManager {
     try {
       localStorage.removeItem(this.USERS_KEY)
       localStorage.removeItem(this.CURRENT_USER_KEY)
+      clearAllData()
       
       // 清除所有备份
       const backupKeys = []

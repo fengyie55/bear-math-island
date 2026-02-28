@@ -1,55 +1,37 @@
 <template>
-  <div class="settings-modal" v-if="show">
-    <div class="modal-overlay" @click="close"></div>
+  <div class="modal">
     <div class="modal-content">
       <div class="modal-header">
-        <div class="modal-title">⚙️ 设置</div>
-        <div class="close-button" @click="close">×</div>
+        <h2>游戏设置</h2>
+        <button class="close-button" @click="closeModal">×</button>
       </div>
-      
-      <div class="settings-content">
+      <div class="modal-body">
         <div class="setting-item">
-          <div class="setting-label">每日游戏时长（分钟）</div>
-          <div class="setting-value">
-            <select v-model="localSettings.dailyDurationLimit">
-              <option value="15">15分钟（适合3-4岁）</option>
-              <option value="20">20分钟（适合4-5岁）</option>
-              <option value="30">30分钟（适合5-6岁）</option>
-            </select>
+          <label>每日游戏时长限制 (分钟)</label>
+          <input type="number" v-model.number="settings.dailyTimeLimit" min="5" max="120">
+        </div>
+        <div class="setting-item">
+          <label>语音提示</label>
+          <div class="toggle">
+            <input type="checkbox" id="voice" v-model="settings.voiceEnabled">
+            <label for="voice" class="toggle-label"></label>
           </div>
         </div>
-        
         <div class="setting-item">
-          <div class="setting-label">语音提示</div>
-          <div class="setting-value">
-            <label class="toggle-switch">
-              <input type="checkbox" v-model="localSettings.voiceEnabled">
-              <span class="slider"></span>
-            </label>
+          <label>护眼模式</label>
+          <div class="toggle">
+            <input type="checkbox" id="eye" v-model="settings.eyeProtection">
+            <label for="eye" class="toggle-label"></label>
           </div>
         </div>
-        
         <div class="setting-item">
-          <div class="setting-label">护眼模式</div>
-          <div class="setting-value">
-            <label class="toggle-switch">
-              <input type="checkbox" v-model="localSettings.eyeProtectionEnabled">
-              <span class="slider"></span>
-            </label>
-          </div>
-        </div>
-        
-        <div class="setting-item">
-          <div class="setting-label">音效</div>
-          <div class="setting-value">
-            <label class="toggle-switch">
-              <input type="checkbox" v-model="localSettings.soundEnabled">
-              <span class="slider"></span>
-            </label>
+          <label>音效</label>
+          <div class="toggle">
+            <input type="checkbox" id="sound" v-model="settings.soundEnabled">
+            <label for="sound" class="toggle-label"></label>
           </div>
         </div>
       </div>
-      
       <div class="modal-footer">
         <button class="save-button" @click="saveSettings">保存设置</button>
       </div>
@@ -57,89 +39,42 @@
   </div>
 </template>
 
-<script>
-import { ref, reactive, watch } from 'vue'
+<script setup>
+import { useSettingsStore } from '../stores/settingsStore'
 
-export default {
-  name: 'SettingsModal',
-  props: {
-    show: {
-      type: Boolean,
-      default: false
-    },
-    settings: {
-      type: Object,
-      default: () => ({
-        dailyDurationLimit: 15,
-        voiceEnabled: true,
-        soundEnabled: true,
-        eyeProtectionEnabled: true
-      })
-    }
-  },
-  emits: ['close', 'save-settings'],
-  setup(props, { emit }) {
-    const localSettings = reactive({
-      dailyDurationLimit: props.settings.dailyDurationLimit,
-      voiceEnabled: props.settings.voiceEnabled,
-      soundEnabled: props.settings.soundEnabled,
-      eyeProtectionEnabled: props.settings.eyeProtectionEnabled
-    })
+const settings = useSettingsStore()
 
-    watch(() => props.settings, (newSettings) => {
-      Object.assign(localSettings, newSettings)
-    }, { deep: true })
+const closeModal = () => {
+  settings.closeSettings()
+}
 
-    const close = () => {
-      emit('close')
-    }
-
-    const saveSettings = () => {
-      emit('save-settings', { ...localSettings })
-    }
-
-    return {
-      localSettings,
-      close,
-      saveSettings
-    }
-  }
+const saveSettings = () => {
+  settings.saveSettings()
+  closeModal()
 }
 </script>
 
 <style scoped>
-.settings-modal {
+.modal {
   position: fixed;
   top: 0;
   left: 0;
   width: 100%;
   height: 100%;
+  background-color: rgba(0, 0, 0, 0.5);
   display: flex;
-  align-items: center;
   justify-content: center;
+  align-items: center;
   z-index: 1000;
-  animation: modalFadeIn 0.3s ease;
-}
-
-.modal-overlay {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: rgba(0, 0, 0, 0.5);
-  backdrop-filter: blur(5px);
 }
 
 .modal-content {
-  background: white;
-  color: #333;
-  padding: 30px;
-  border-radius: 20px;
-  text-align: center;
+  background-color: white;
+  border-radius: 10px;
+  padding: 20px;
+  width: 90%;
   max-width: 400px;
-  position: relative;
-  z-index: 1001;
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
   animation: modalSlideIn 0.3s ease;
 }
 
@@ -148,61 +83,63 @@ export default {
   justify-content: space-between;
   align-items: center;
   margin-bottom: 20px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #eee;
 }
 
-.modal-title {
-  font-size: 1.5rem;
-  font-weight: bold;
+.modal-header h2 {
+  color: #333;
+  margin: 0;
 }
 
 .close-button {
-  font-size: 1.5rem;
+  background: none;
+  border: none;
+  font-size: 24px;
   cursor: pointer;
-  opacity: 0.6;
+  color: #999;
+  transition: color 0.3s;
 }
 
 .close-button:hover {
-  opacity: 1;
-}
-
-.settings-content {
-  text-align: left;
-  margin: 20px 0;
+  color: #333;
 }
 
 .setting-item {
+  margin-bottom: 20px;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin: 15px 0;
-  padding: 10px 0;
-  border-bottom: 1px solid rgba(0,0,0,0.1);
 }
 
-.setting-label {
-  font-weight: bold;
-  flex: 1;
+.setting-item label {
+  font-size: 16px;
+  color: #333;
 }
 
-.setting-value {
-  flex: 1;
-  text-align: right;
+.setting-item select,
+.setting-item input[type="number"] {
+  padding: 8px 12px;
+  border: 1px solid #ddd;
+  border-radius: 5px;
+  font-size: 14px;
+  width: 120px;
 }
 
-.toggle-switch {
+.toggle {
   position: relative;
   display: inline-block;
-  width: 60px;
-  height: 34px;
+  width: 50px;
+  height: 24px;
 }
 
-.toggle-switch input {
+.toggle input {
   opacity: 0;
   width: 0;
   height: 0;
 }
 
-.slider {
+.toggle-label {
   position: absolute;
   cursor: pointer;
   top: 0;
@@ -210,48 +147,56 @@ export default {
   right: 0;
   bottom: 0;
   background-color: #ccc;
-  transition: 0.4s;
-  border-radius: 34px;
+  transition: .4s;
+  border-radius: 24px;
 }
 
-.slider:before {
+.toggle-label:before {
   position: absolute;
   content: "";
-  height: 26px;
-  width: 26px;
-  left: 4px;
-  bottom: 4px;
+  height: 18px;
+  width: 18px;
+  left: 3px;
+  bottom: 3px;
   background-color: white;
-  transition: 0.4s;
+  transition: .4s;
   border-radius: 50%;
 }
 
-input:checked + .slider {
-  background-color: #4CAF50;
+input:checked + .toggle-label {
+  background-color: #667eea;
 }
 
-input:checked + .slider:before {
+input:focus + .toggle-label {
+  box-shadow: 0 0 1px #667eea;
+}
+
+input:checked + .toggle-label:before {
   transform: translateX(26px);
 }
 
-.save-button {
-  background: linear-gradient(45deg, #4CAF50, #8BC34A);
-  color: white;
-  padding: 12px 24px;
-  border: none;
-  border-radius: 25px;
-  font-weight: bold;
-  cursor: pointer;
+.modal-footer {
   margin-top: 20px;
+  padding-top: 10px;
+  border-top: 1px solid #eee;
+  display: flex;
+  justify-content: flex-end;
 }
 
-@keyframes modalFadeIn {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
+.save-button {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border: none;
+  border-radius: 5px;
+  padding: 10px 20px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: all 0.3s ease;
+}
+
+.save-button:hover {
+  transform: scale(1.05);
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
 }
 
 @keyframes modalSlideIn {

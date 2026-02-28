@@ -1,177 +1,179 @@
 <template>
   <div class="practice-screen">
-    <div class="mode-content-header">
-      <div class="back-button" @click="backToMain">← 返回首页</div>
-      <div class="mode-content-title">📚 练习模式</div>
-      <div class="empty-space"></div>
+    <div class="header">
+      <button class="back-button" @click="goBack">← 返回</button>
+      <h1>练习模式</h1>
     </div>
-
-    <div class="practice-level-selection">
-      <div class="practice-level" @click="selectPracticeLevel('5以内加法')">
-        <div class="practice-level-icon">🍎</div>
-        <div class="practice-level-title">5以内加法</div>
-        <div class="practice-level-difficulty">⭐ 简单</div>
-      </div>
-      
-      <div class="practice-level" @click="selectPracticeLevel('5以内减法')">
-        <div class="practice-level-icon">🍊</div>
-        <div class="practice-level-title">5以内减法</div>
-        <div class="practice-level-difficulty">⭐ 简单</div>
-      </div>
-      
-      <div class="practice-level" @click="selectPracticeLevel('5以内混合运算')">
-        <div class="practice-level-icon">🍓</div>
-        <div class="practice-level-title">5以内混合运算</div>
-        <div class="practice-level-difficulty">⭐⭐ 中等</div>
-      </div>
-      
-      <div class="practice-level" @click="selectPracticeLevel('10以内加法')">
-        <div class="practice-level-icon">🍇</div>
-        <div class="practice-level-title">10以内加法</div>
-        <div class="practice-level-difficulty">⭐⭐ 中等</div>
-      </div>
-      
-      <div class="practice-level" @click="selectPracticeLevel('10以内减法')">
-        <div class="practice-level-icon">🍒</div>
-        <div class="practice-level-title">10以内减法</div>
-        <div class="practice-level-difficulty">⭐⭐ 中等</div>
-      </div>
-      
-      <div class="practice-level" @click="selectPracticeLevel('10以内混合运算')">
-        <div class="practice-level-icon">🍉</div>
-        <div class="practice-level-title">10以内混合运算</div>
-        <div class="practice-level-difficulty">⭐⭐⭐ 困难</div>
-      </div>
-      
-      <div class="practice-level" @click="selectPracticeLevel('乘法表')">
-        <div class="practice-level-icon">✖️</div>
-        <div class="practice-level-title">乘法表</div>
-        <div class="practice-level-difficulty">⭐⭐ 中等</div>
-      </div>
-      
-      <div class="practice-level" @click="selectPracticeLevel('数字认识')">
-        <div class="practice-level-icon">🔢</div>
-        <div class="practice-level-title">数字认识</div>
-        <div class="practice-level-difficulty">⭐ 简单</div>
-      </div>
-      
-      <div class="practice-level" @click="selectPracticeLevel('比较大小')">
-        <div class="practice-level-icon">📏</div>
-        <div class="practice-level-title">比较大小</div>
-        <div class="practice-level-difficulty">⭐⭐ 中等</div>
+    
+    <div class="practice-topics">
+      <div 
+        v-for="topic in topics" 
+        :key="topic.id"
+        class="topic-card"
+        @click="selectTopic(topic.id)"
+      >
+        <div class="topic-icon">{{ topic.icon }}</div>
+        <h2 class="topic-name">{{ topic.name }}</h2>
+        <p class="topic-description">{{ topic.description }}</p>
+        <div v-if="getTopicProgress(topic.id).completed" class="completed-badge">
+          最佳分数: {{ getTopicProgress(topic.id).bestScore }}
+        </div>
       </div>
     </div>
   </div>
 </template>
 
-<script>
-export default {
-  name: 'PracticeScreen',
-  emits: ['back-to-main', 'select-practice-level'],
-  setup(props, { emit }) {
-    const backToMain = () => {
-      emit('back-to-main')
-    }
+<script setup>
+import { useGameStore } from '../stores/gameStore'
 
-    const selectPracticeLevel = (level) => {
-      emit('select-practice-level', level)
-    }
+const game = useGameStore()
 
-    return {
-      backToMain,
-      selectPracticeLevel
-    }
-  }
+const topics = [
+  { id: 'addition', name: '加法', icon: '+', description: '练习加法运算' },
+  { id: 'subtraction', name: '减法', icon: '-', description: '练习减法运算' },
+  { id: 'multiplication', name: '乘法', icon: '×', description: '练习乘法运算' },
+  { id: 'division', name: '除法', icon: '÷', description: '练习除法运算' }
+]
+
+const goBack = () => {
+  game.setScreen('main')
+}
+
+const selectTopic = (topicId) => {
+  game.startPracticeMode(topicId, 1)
+}
+
+const getTopicProgress = (topicId) => {
+  return game.practiceProgress[topicId] || { completed: false, bestScore: 0 }
 }
 </script>
 
 <style scoped>
 .practice-screen {
-  min-height: 100vh;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  padding: 20px;
-  color: white;
-}
-
-.practice-screen .mode-content-header {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 40px;
-  padding: 0 20px;
+  flex-direction: column;
+  min-height: 80vh;
+  padding: 20px;
 }
 
-.practice-screen .mode-content-title {
-  font-size: 1.8rem;
-  font-weight: bold;
-  text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+.header {
+  display: flex;
+  align-items: center;
+  margin-bottom: 30px;
+  color: white;
 }
 
 .back-button {
-  background: rgba(255,255,255,0.1);
-  padding: 10px 20px;
-  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 5px;
+  padding: 8px 16px;
+  color: white;
   cursor: pointer;
+  margin-right: 20px;
   transition: all 0.3s ease;
-  font-size: 0.9rem;
 }
 
 .back-button:hover {
-  background: rgba(255,255,255,0.2);
+  background: rgba(255, 255, 255, 0.3);
 }
 
-.empty-space {
-  width: 80px; /* 占位空间，使标题居中 */
+.header h1 {
+  font-size: 2rem;
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
 }
 
-.practice-level-selection {
+.practice-topics {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
+  grid-template-columns: repeat(3, 1fr);
   gap: 20px;
-  max-width: 600px;
-  margin: 0 auto;
+  flex: 1;
 }
 
-.practice-level {
-  background: rgba(255,255,255,0.1);
+.topic-card {
+  background: white;
   border-radius: 15px;
-  padding: 25px;
+  padding: 20px;
   text-align: center;
   cursor: pointer;
   transition: all 0.3s ease;
-  backdrop-filter: blur(10px);
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+  position: relative;
+  overflow: hidden;
 }
 
-.practice-level:hover {
-  background: rgba(255,255,255,0.15);
-  transform: translateY(-5px);
+.topic-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+  opacity: 0.8;
+  z-index: 1;
 }
 
-.practice-level-icon {
+.topic-card * {
+  position: relative;
+  z-index: 2;
+}
+
+.topic-card:hover {
+  transform: translateY(-10px);
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+}
+
+.topic-icon {
   font-size: 3rem;
+  font-weight: bold;
+  color: white;
   margin-bottom: 15px;
 }
 
-.practice-level-title {
-  font-size: 1.2rem;
-  font-weight: bold;
-  margin-bottom: 10px;
+.topic-name {
+  font-size: 1.5rem;
   color: white;
+  margin-bottom: 10px;
 }
 
-.practice-level-difficulty {
+.topic-description {
+  font-size: 0.9rem;
+  color: rgba(255, 255, 255, 0.8);
+  margin-bottom: 10px;
+}
+
+.completed-badge {
+  background: rgba(255, 255, 255, 0.8);
+  border-radius: 10px;
+  padding: 5px 10px;
   font-size: 0.8rem;
-  color: rgba(255,255,255,0.7);
-  background: rgba(255,255,255,0.1);
-  padding: 5px 15px;
-  border-radius: 15px;
-  display: inline-block;
+  color: #f5576c;
+  font-weight: bold;
+  margin-top: 10px;
 }
 
 @media (max-width: 768px) {
-  .practice-level-selection {
+  .practice-topics {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  
+  .header h1 {
+    font-size: 1.5rem;
+  }
+  
+  .topic-icon {
+    font-size: 2.5rem;
+  }
+  
+  .topic-name {
+    font-size: 1.2rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .practice-topics {
     grid-template-columns: 1fr;
-    gap: 15px;
   }
 }
 </style>

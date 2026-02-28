@@ -1,221 +1,169 @@
 <template>
   <div class="main-screen">
-    <div class="game-header">
-      <div class="game-title">小熊的海岛大冒险 🏝️</div>
-      <div class="game-subtitle">帮小熊收集魔法星星，修复海岛！✨</div>
+    <div class="header">
+      <h1>小熊数学岛</h1>
+      <p>欢迎来到数学冒险之旅！</p>
     </div>
-
-    <!-- 模式选择 -->
-    <div class="mode-selection">
-      <div class="mode-card" @click="selectMode('adventure')">
-        <div class="mode-icon">🏝️</div>
-        <div class="mode-title">冒险模式</div>
-        <div class="mode-description">适合3-4岁小朋友<br/>解锁海岛地图，边玩边学</div>
-      </div>
+    
+    <div class="game-modes">
+      <button class="mode-button adventure" @click="navigateToAdventure">
+        <h2>冒险模式</h2>
+        <p>探索数学世界，挑战关卡</p>
+      </button>
       
-      <div class="mode-card" @click="selectMode('practice')">
-        <div class="mode-icon">📚</div>
-        <div class="mode-title">练习模式</div>
-        <div class="mode-description">适合4-6岁小朋友<br/>直接答题，快速提升</div>
-      </div>
+      <button class="mode-button practice" @click="navigateToPractice">
+        <h2>练习模式</h2>
+        <p>针对性练习，提升技能</p>
+      </button>
     </div>
-
-    <div class="player-info">
-      <div class="player-stats">
-        <div class="stat-item">
-          <span class="stat-icon">⭐</span>
-          <span class="stat-value">{{ totalScore }}</span>
-          <span class="stat-label">魔法星星</span>
-        </div>
-        <div class="stat-item">
-          <span class="stat-icon">🏆</span>
-          <span class="stat-value">{{ completedAreas }}</span>
-          <span class="stat-label">已解锁区域</span>
-        </div>
-        <div class="stat-item">
-          <span class="stat-icon">⏱️</span>
-          <span class="stat-value">{{ remainingTime }}</span>
-          <span class="stat-label">今日剩余</span>
-        </div>
-      </div>
-    </div>
-
-    <div class="settings-button" @click="showSettings = true">
-      ⚙️ 设置
+    
+    <div class="footer">
+      <button class="settings-button" @click="toggleSettings">
+        设置
+      </button>
     </div>
   </div>
 </template>
 
-<script>
-import { computed } from 'vue'
+<script setup>
+import { useGameStore } from '../stores/gameStore'
+import { useSettingsStore } from '../stores/settingsStore'
 
-export default {
-  name: 'MainScreen',
-  props: {
-    totalScore: {
-      type: Number,
-      default: 0
-    },
-    completedAreas: {
-      type: Number,
-      default: 0
-    },
-    remainingTime: {
-      type: String,
-      default: '0:00'
-    }
-  },
-  emits: ['select-mode', 'show-settings'],
-  setup(props, { emit }) {
-    const selectMode = (mode) => {
-      emit('select-mode', mode)
-    }
+const game = useGameStore()
+const settings = useSettingsStore()
 
-    return {
-      selectMode
-    }
-  }
+const navigateToAdventure = () => {
+  game.setScreen('adventure')
+}
+
+const navigateToPractice = () => {
+  game.setScreen('practice')
+}
+
+const toggleSettings = () => {
+  settings.toggleSettings()
 }
 </script>
 
 <style scoped>
 .main-screen {
-  max-width: 1200px;
-  margin: 0 auto;
-  text-align: center;
-  height: 100%;
   display: flex;
   flex-direction: column;
-}
-
-.mode-selection {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 20px;
-  margin-bottom: 25px;
-  max-width: 800px;
-  margin-left: auto;
-  margin-right: auto;
-  flex: 1;
-}
-
-.mode-card {
-  background: rgba(255,255,255,0.1);
-  border-radius: 16px;
-  padding: 20px;
-  text-align: center;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  backdrop-filter: blur(10px);
-  border: 2px solid transparent;
-  display: flex;
-  flex-direction: column;
+  align-items: center;
   justify-content: center;
-  min-height: 200px;
+  min-height: 80vh;
+  padding: 20px;
 }
 
-.mode-card:hover {
-  background: rgba(255,255,255,0.15);
-  transform: translateY(-5px);
-  border-color: rgba(255,255,255,0.3);
-}
-
-.mode-icon {
-  font-size: 3rem;
-  margin-bottom: 15px;
-}
-
-.mode-title {
-  font-size: 1.3rem;
-  font-weight: bold;
-  margin-bottom: 10px;
+.header {
+  text-align: center;
+  margin-bottom: 40px;
   color: white;
 }
 
-.mode-description {
-  font-size: 0.85rem;
-  color: rgba(255,255,255,0.8);
-  line-height: 1.4;
-  margin-bottom: 15px;
-}
-
-.game-header {
-  margin-bottom: 40px;
-}
-
-.game-title {
+.header h1 {
   font-size: 2.5rem;
-  font-weight: bold;
   margin-bottom: 10px;
-  text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
 }
 
-.game-subtitle {
+.header p {
   font-size: 1.2rem;
   opacity: 0.9;
 }
 
-.player-info {
-  background: rgba(255,255,255,0.1);
-  border-radius: 20px;
-  padding: 20px;
-  margin-bottom: 20px;
-  backdrop-filter: blur(10px);
-}
-
-.player-stats {
+.game-modes {
   display: flex;
-  justify-content: space-around;
-  gap: 20px;
+  gap: 30px;
+  margin-bottom: 40px;
 }
 
-.stat-item {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
+.mode-button {
+  background: white;
+  border: none;
+  border-radius: 15px;
+  padding: 30px;
+  width: 250px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
 }
 
-.stat-icon {
+.mode-button:hover {
+  transform: translateY(-10px);
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+}
+
+.mode-button h2 {
   font-size: 1.5rem;
-  margin-bottom: 5px;
+  margin-bottom: 10px;
+  color: #333;
 }
 
-.stat-value {
-  font-size: 1.5rem;
-  font-weight: bold;
-  margin-bottom: 5px;
+.mode-button p {
+  font-size: 1rem;
+  color: #666;
 }
 
-.stat-label {
-  font-size: 0.8rem;
-  opacity: 0.8;
+.mode-button.adventure {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+}
+
+.mode-button.adventure h2 {
+  color: white;
+}
+
+.mode-button.adventure p {
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.mode-button.practice {
+  background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+  color: white;
+}
+
+.mode-button.practice h2 {
+  color: white;
+}
+
+.mode-button.practice p {
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.footer {
+  margin-top: auto;
 }
 
 .settings-button {
-  background: rgba(255,255,255,0.1);
-  padding: 15px 25px;
-  border-radius: 15px;
+  background: rgba(255, 255, 255, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 20px;
+  padding: 10px 20px;
+  color: white;
   cursor: pointer;
-  transition: background 0.3s ease;
+  transition: all 0.3s ease;
 }
 
 .settings-button:hover {
-  background: rgba(255,255,255,0.2);
+  background: rgba(255, 255, 255, 0.3);
+  transform: scale(1.05);
 }
 
 @media (max-width: 768px) {
-  .game-title {
-    font-size: 2rem;
-  }
-  
-  .mode-selection {
-    grid-template-columns: 1fr;
-    gap: 20px;
-  }
-  
-  .player-stats {
+  .game-modes {
     flex-direction: column;
-    gap: 15px;
+    align-items: center;
+  }
+  
+  .mode-button {
+    width: 200px;
+    padding: 20px;
+  }
+  
+  .header h1 {
+    font-size: 2rem;
   }
 }
 </style>

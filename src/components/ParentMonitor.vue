@@ -87,7 +87,7 @@
     <div class="trend-section">
       <h3>📉 学习趋势</h3>
       <div class="trend-chart">
-        <canvas ref="trendChart"></canvas>
+        <canvas id="trendChart"></canvas>
       </div>
     </div>
     
@@ -96,7 +96,7 @@
       <h3>🎮 游戏模式分析</h3>
       <div class="mode-content">
         <div class="mode-chart">
-          <canvas ref="modeChart"></canvas>
+          <canvas id="modeChart"></canvas>
         </div>
         <div class="mode-analysis">
           <div class="mode-item" v-for="(mode, index) in modeAnalysis" :key="index">
@@ -122,7 +122,7 @@
     <div class="time-section">
       <h3>⏰ 学习时间分布</h3>
       <div class="time-chart">
-        <canvas ref="timeChart"></canvas>
+        <canvas id="timeChart"></canvas>
       </div>
     </div>
     
@@ -221,529 +221,427 @@
   </div>
 </template>
 
-<script>
-import StorageManager from '../utils/storage'
+<script setup>
+import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
+import { useSettingsStore } from '../stores/settingsStore'
+import { useGameStore } from '../stores/gameStore'
 import { Chart } from 'chart.js/auto'
 
-export default {
-  name: 'ParentMonitor',
+const settings = useSettingsStore()
+const game = useGameStore()
+
+const trendChart = ref(null)
+const modeChart = ref(null)
+const timeChart = ref(null)
+const timeRange = ref('7')
+const difficultyLevel = ref('all')
+const questionType = ref('all')
+
+// 计算属性
+const correctRate = computed(() => {
+  return settings.overallAccuracy
+})
+
+const averageScore = computed(() => {
+  return settings.averagePlayTime
+})
+
+const lastUpdate = computed(() => {
+  return new Date().toLocaleString('zh-CN')
+})
+
+const modeAnalysis = computed(() => {
+  const modeStats = {
+    addition: { name: '加法运算', games: 0, correct: 0 },
+    subtraction: { name: '减法运算', games: 0, correct: 0 },
+    multiplication: { name: '乘法运算', games: 0, correct: 0 },
+    division: { name: '除法运算', games: 0, correct: 0 }
+  }
   
-  props: {
-    currentUser: {
-      type: Object,
-      required: true
-    }
-  },
+  // 这里可以根据实际的游戏历史数据进行统计
+  // 暂时使用模拟数据
+  Object.keys(modeStats).forEach(key => {
+    modeStats[key].games = Math.floor(Math.random() * 50) + 10
+    modeStats[key].correct = Math.floor(modeStats[key].games * (Math.random() * 0.5 + 0.5))
+  })
   
-  data() {
-    return {
-      userData: null,
-      trendChart: null,
-      modeChart: null,
-      timeChart: null,
-      timeRange: '7',
-      difficultyLevel: 'all',
-      questionType: 'all'
-    }
-  },
+  return Object.values(modeStats)
+    .map(mode => ({
+      ...mode,
+      accuracy: mode.games > 0 ? Math.round((mode.correct / mode.games) * 100) : 0
+    }))
+    .sort((a, b) => b.games - a.games)
+})
+
+const learningSuggestions = computed(() => {
+  const suggestions = []
   
-  computed: {
-    correctRate() {
-      const totalQuestions = this.userData?.stats?.totalQuestions || 0
-      const correctCount = this.userData?.stats?.totalCorrect || 0
-      
-      if (totalQuestions === 0) return 0
-      return Math.round((correctCount / totalQuestions) * 100)
+  // 基于正确率的建议
+  if (correctRate.value < 60) {
+    suggestions.push({
+      title: '需要加强基础练习',
+      content: '孩子的正确率较低，建议多进行基础题目的练习，重点强化薄弱环节。',
+      priority: 'high'
+    })
+  } else if (correctRate.value < 80) {
+    suggestions.push({
+      title: '继续提升正确率',
+      content: '孩子的正确率还有提升空间，建议针对错题进行专项练习。',
+      priority: 'medium'
+    })
+  }
+  
+  // 基于学习时间的建议
+  if (settings.totalPlayTime < 120) {
+    suggestions.push({
+      title: '增加学习时间',
+      content: '总学习时间较短，建议每天保证至少15分钟的学习时间。',
+      priority: 'medium'
+    })
+  }
+  
+  // 基于游戏次数的建议
+  if (settings.totalGamesPlayed < 20) {
+    suggestions.push({
+      title: '增加学习频率',
+      content: '学习次数较少，建议每天安排15-20分钟的学习时间，循序渐进地积累知识。',
+      priority: 'low'
+    })
+  }
+  
+  return suggestions
+})
+
+const totalStudyTime = computed(() => {
+  return settings.totalPlayTime
+})
+
+const todayStudyTime = computed(() => {
+  return settings.todayPlayTime
+})
+
+const weeklyQuestions = computed(() => {
+  // 这里可以根据实际的游戏历史数据进行统计
+  // 暂时使用模拟数据
+  return Math.floor(Math.random() * 100) + 50
+})
+
+const dailyTimeProgress = computed(() => {
+  const target = 15
+  const progress = (todayStudyTime.value / target) * 100
+  return Math.min(progress, 100)
+})
+
+const weeklyQuestionProgress = computed(() => {
+  const target = 100
+  const progress = (weeklyQuestions.value / target) * 100
+  return Math.min(progress, 100)
+})
+
+// 方法
+const initCharts = () => {
+  initTrendChart()
+  initModeChart()
+  initTimeChart()
+}
+
+const initTrendChart = () => {
+  const ctx = document.getElementById('trendChart')?.getContext('2d')
+  if (!ctx) return
+  
+  const weeklyData = getWeeklyData()
+  
+  trendChart.value = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: weeklyData.labels,
+      datasets: [
+        {
+          label: '每日游戏次数',
+          data: weeklyData.games,
+          borderColor: 'rgb(102, 126, 234)',
+          backgroundColor: 'rgba(102, 126, 234, 0.1)',
+          borderWidth: 2,
+          fill: true,
+          tension: 0.4,
+          pointRadius: 3,
+          pointHoverRadius: 5
+        },
+        {
+          label: '每日答题数量',
+          data: weeklyData.questions,
+          borderColor: 'rgb(82, 196, 26)',
+          backgroundColor: 'rgba(82, 196, 26, 0.1)',
+          borderWidth: 2,
+          fill: true,
+          tension: 0.4,
+          pointRadius: 3,
+          pointHoverRadius: 5
+        },
+        {
+          label: '每日正确率',
+          data: weeklyData.accuracy,
+          borderColor: 'rgb(255, 193, 7)',
+          backgroundColor: 'rgba(255, 193, 7, 0.1)',
+          borderWidth: 2,
+          fill: true,
+          tension: 0.4,
+          pointRadius: 3,
+          pointHoverRadius: 5,
+          yAxisID: 'y2'
+        }
+      ]
     },
-    
-    averageScore() {
-      const totalGames = this.userData?.stats?.totalGames || 0
-      const totalScore = this.userData?.stats?.totalScore || 0
-      
-      if (totalGames === 0) return 0
-      return Math.round(totalScore / totalGames)
-    },
-    
-    lastUpdate() {
-      const lastActivity = this.userData?.lastActivity || new Date()
-      return new Date(lastActivity).toLocaleString('zh-CN')
-    },
-    
-    modeAnalysis() {
-      const gameHistory = this.userData?.gameHistory || []
-      
-      const modeStats = {
-        addition: { name: '加法运算', games: 0, correct: 0 },
-        subtraction: { name: '减法运算', games: 0, correct: 0 },
-        multiplication: { name: '乘法运算', games: 0, correct: 0 },
-        division: { name: '除法运算', games: 0, correct: 0 },
-        comparison: { name: '比较大小', games: 0, correct: 0 },
-        matching: { name: '数字匹配', games: 0, correct: 0 }
-      }
-      
-      gameHistory.forEach(game => {
-        const modeKey = game.gameType || 'other'
-        if (modeStats[modeKey]) {
-          modeStats[modeKey].games++
-          if (game.isCorrect) {
-            modeStats[modeKey].correct++
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      interaction: {
+        mode: 'index',
+        intersect: false
+      },
+      plugins: {
+        title: {
+          display: true,
+          text: '最近7天学习趋势',
+          font: {
+            size: 14,
+            weight: 'bold'
+          }
+        },
+        legend: {
+          position: 'bottom',
+          labels: {
+            padding: 15
           }
         }
-      })
-      
-      return Object.values(modeStats)
-        .filter(mode => mode.games > 0)
-        .map(mode => ({
-          ...mode,
-          accuracy: mode.games > 0 ? Math.round((mode.correct / mode.games) * 100) : 0
-        }))
-        .sort((a, b) => b.games - a.games)
-    },
-    
-    learningSuggestions() {
-      const suggestions = []
-      
-      // 基于正确率的建议
-      if (this.correctRate < 60) {
-        suggestions.push({
-          title: '需要加强基础练习',
-          content: '孩子的正确率较低，建议多进行基础题目的练习，重点强化薄弱环节。',
-          priority: 'high'
-        })
-      } else if (this.correctRate < 80) {
-        suggestions.push({
-          title: '继续提升正确率',
-          content: '孩子的正确率还有提升空间，建议针对错题进行专项练习。',
-          priority: 'medium'
-        })
-      }
-      
-      // 基于连胜记录的建议
-      if (this.userData?.stats?.currentStreak < 3) {
-        suggestions.push({
-          title: '保持学习连续性',
-          content: '当前连胜记录较短，建议鼓励孩子每天坚持学习，形成良好的学习习惯。',
-          priority: 'medium'
-        })
-      } else if (this.userData?.stats?.currentStreak >= 7) {
-        suggestions.push({
-          title: '优秀的学习习惯',
-          content: '孩子已经保持了良好的学习连续性，继续保持！',
-          priority: 'low'
-        })
-      }
-      
-      // 基于游戏次数的建议
-      if (this.userData?.stats?.totalGames < 20) {
-        suggestions.push({
-          title: '增加学习频率',
-          content: '学习次数较少，建议每天安排15-20分钟的学习时间，循序渐进地积累知识。',
-          priority: 'low'
-        })
-      }
-      
-      // 基于学习时间的建议
-      if (this.totalStudyTime < 120) {
-        suggestions.push({
-          title: '增加学习时间',
-          content: '总学习时间较短，建议每天保证至少15分钟的学习时间。',
-          priority: 'medium'
-        })
-      }
-      
-      return suggestions
-    },
-    
-    totalStudyTime() {
-      return this.userData?.stats?.totalStudyTime || 0
-    },
-    
-    todayStudyTime() {
-      const today = new Date().toDateString()
-      const gameHistory = this.userData?.gameHistory || []
-      const todayGames = gameHistory.filter(game => {
-        const gameDate = new Date(game.timestamp).toDateString()
-        return gameDate === today
-      })
-      return todayGames.length * 5 // 假设每局游戏5分钟
-    },
-    
-    weeklyQuestions() {
-      const oneWeekAgo = new Date()
-      oneWeekAgo.setDate(oneWeekAgo.getDate() - 7)
-      const gameHistory = this.userData?.gameHistory || []
-      const weeklyGames = gameHistory.filter(game => {
-        const gameDate = new Date(game.timestamp)
-        return gameDate >= oneWeekAgo
-      })
-      return weeklyGames.length
-    },
-    
-    dailyTimeProgress() {
-      const target = 15
-      const progress = (this.todayStudyTime / target) * 100
-      return Math.min(progress, 100)
-    },
-    
-    weeklyQuestionProgress() {
-      const target = 100
-      const progress = (this.weeklyQuestions / target) * 100
-      return Math.min(progress, 100)
-    },
-    
-    strongAreas() {
-      return this.userData?.stats?.strongAreas || []
-    },
-    
-    weakAreas() {
-      return this.userData?.stats?.weakAreas || []
-    }
-  },
-  
-  created() {
-    this.loadUserData()
-  },
-  
-  mounted() {
-    this.initCharts()
-  },
-  
-  beforeUnmount() {
-    if (this.trendChart) {
-      this.trendChart.destroy()
-    }
-    if (this.modeChart) {
-      this.modeChart.destroy()
-    }
-    if (this.timeChart) {
-      this.timeChart.destroy()
-    }
-  },
-  
-  methods: {
-    loadUserData() {
-      this.userData = this.currentUser
-    },
-    
-    initCharts() {
-      this.initTrendChart()
-      this.initModeChart()
-      this.initTimeChart()
-    },
-    
-    initTrendChart() {
-      const ctx = this.$refs.trendChart?.getContext('2d')
-      if (!ctx) return
-      
-      const weeklyData = this.getWeeklyData()
-      
-      this.trendChart = new Chart(ctx, {
-        type: 'line',
-        data: {
-          labels: weeklyData.labels,
-          datasets: [
-            {
-              label: '每日游戏次数',
-              data: weeklyData.games,
-              borderColor: 'rgb(102, 126, 234)',
-              backgroundColor: 'rgba(102, 126, 234, 0.1)',
-              borderWidth: 2,
-              fill: true,
-              tension: 0.4,
-              pointRadius: 3,
-              pointHoverRadius: 5
-            },
-            {
-              label: '每日答题数量',
-              data: weeklyData.questions,
-              borderColor: 'rgb(82, 196, 26)',
-              backgroundColor: 'rgba(82, 196, 26, 0.1)',
-              borderWidth: 2,
-              fill: true,
-              tension: 0.4,
-              pointRadius: 3,
-              pointHoverRadius: 5
-            },
-            {
-              label: '每日正确率',
-              data: weeklyData.accuracy,
-              borderColor: 'rgb(255, 193, 7)',
-              backgroundColor: 'rgba(255, 193, 7, 0.1)',
-              borderWidth: 2,
-              fill: true,
-              tension: 0.4,
-              pointRadius: 3,
-              pointHoverRadius: 5,
-              yAxisID: 'y2'
-            }
-          ]
+      },
+      scales: {
+        y: {
+          beginAtZero: true,
+          title: {
+            display: true,
+            text: '数量'
+          }
         },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          interaction: {
-            mode: 'index',
-            intersect: false
+        y2: {
+          beginAtZero: true,
+          position: 'right',
+          title: {
+            display: true,
+            text: '正确率 (%)'
           },
-          plugins: {
-            title: {
-              display: true,
-              text: '最近7天学习趋势',
-              font: {
-                size: 14,
-                weight: 'bold'
-              }
-            },
-            legend: {
-              position: 'bottom',
-              labels: {
-                padding: 15
-              }
-            }
-          },
-          scales: {
-            y: {
-              beginAtZero: true,
-              title: {
-                display: true,
-                text: '数量'
-              }
-            },
-            y2: {
-              beginAtZero: true,
-              position: 'right',
-              title: {
-                display: true,
-                text: '正确率 (%)'
-              },
-              max: 100
-            },
-            x: {
-              title: {
-                display: true,
-                text: '日期'
-              }
-            }
+          max: 100
+        },
+        x: {
+          title: {
+            display: true,
+            text: '日期'
           }
         }
-      })
-    },
-    
-    initModeChart() {
-      const ctx = this.$refs.modeChart?.getContext('2d')
-      if (!ctx) return
-      
-      const modeData = this.modeAnalysis
-      
-      this.modeChart = new Chart(ctx, {
-        type: 'doughnut',
-        data: {
-          labels: modeData.map(mode => mode.name),
-          datasets: [{
-            data: modeData.map(mode => mode.games),
-            backgroundColor: [
-              'rgba(102, 126, 234, 0.8)',
-              'rgba(82, 196, 26, 0.8)',
-              'rgba(255, 193, 7, 0.8)',
-              'rgba(255, 99, 132, 0.8)',
-              'rgba(54, 162, 235, 0.8)',
-              'rgba(255, 159, 64, 0.8)'
-            ],
-            borderColor: [
-              'rgba(102, 126, 234, 1)',
-              'rgba(82, 196, 26, 1)',
-              'rgba(255, 193, 7, 1)',
-              'rgba(255, 99, 132, 1)',
-              'rgba(54, 162, 235, 1)',
-              'rgba(255, 159, 64, 1)'
-            ],
-            borderWidth: 1
-          }]
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          plugins: {
-            title: {
-              display: true,
-              text: '游戏模式分布',
-              font: {
-                size: 14,
-                weight: 'bold'
-              }
-            },
-            legend: {
-              position: 'bottom'
-            }
-          }
-        }
-      })
-    },
-    
-    initTimeChart() {
-      const ctx = this.$refs.timeChart?.getContext('2d')
-      if (!ctx) return
-      
-      const timeData = this.getTimeDistributionData()
-      
-      this.timeChart = new Chart(ctx, {
-        type: 'bar',
-        data: {
-          labels: timeData.labels,
-          datasets: [{
-            label: '学习时间（分钟）',
-            data: timeData.data,
-            backgroundColor: 'rgba(102, 126, 234, 0.8)',
-            borderColor: 'rgba(102, 126, 234, 1)',
-            borderWidth: 1
-          }]
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          plugins: {
-            title: {
-              display: true,
-              text: '每日学习时间分布',
-              font: {
-                size: 14,
-                weight: 'bold'
-              }
-            }
-          },
-          scales: {
-            y: {
-              beginAtZero: true,
-              title: {
-                display: true,
-                text: '时间（分钟）'
-              }
-            },
-            x: {
-              title: {
-                display: true,
-                text: '星期'
-              }
-            }
-          }
-        }
-      })
-    },
-    
-    getWeeklyData() {
-      const labels = []
-      const games = []
-      const questions = []
-      const accuracy = []
-      
-      const today = new Date()
-      const gameHistory = this.userData?.gameHistory || []
-      
-      for (let i = 6; i >= 0; i--) {
-        const date = new Date(today)
-        date.setDate(today.getDate() - i)
-        const dateStr = date.toLocaleDateString('zh-CN', {
-          month: 'short',
-          day: 'numeric'
-        })
-        
-        labels.push(dateStr)
-        
-        // 获取当天的游戏记录
-        const dayGames = gameHistory.filter(game => {
-          const gameDate = new Date(game.timestamp)
-          return gameDate.toDateString() === date.toDateString()
-        })
-        
-        const dayGamesCount = dayGames.length
-        const correctCount = dayGames.filter(game => game.isCorrect).length
-        const dayAccuracy = dayGamesCount > 0 ? Math.round((correctCount / dayGamesCount) * 100) : 0
-        
-        games.push(dayGamesCount)
-        questions.push(dayGamesCount) // 假设每局游戏1题
-        accuracy.push(dayAccuracy)
-      }
-      
-      return { labels, games, questions, accuracy }
-    },
-    
-    getTimeDistributionData() {
-      const labels = ['周一', '周二', '周三', '周四', '周五', '周六', '周日']
-      const data = new Array(7).fill(0)
-      
-      const gameHistory = this.userData?.gameHistory || []
-      gameHistory.forEach(game => {
-        const gameDate = new Date(game.timestamp)
-        const dayOfWeek = gameDate.getDay() // 0-6，0表示周日
-        const adjustedDay = dayOfWeek === 0 ? 6 : dayOfWeek - 1 // 调整为0-6，0表示周一
-        data[adjustedDay] += 5 // 假设每局游戏5分钟
-      })
-      
-      return { labels, data }
-    },
-    
-    getPriorityText(priority) {
-      const priorityMap = {
-        high: '📌 高优先级',
-        medium: '⚠️ 中等优先级',
-        low: 'ℹ️ 低优先级'
-      }
-      
-      return priorityMap[priority] || 'ℹ️ 未知'
-    },
-    
-    getAreaName(area) {
-      const areaMap = {
-        addition: '加法运算',
-        subtraction: '减法运算',
-        multiplication: '乘法运算',
-        division: '除法运算',
-        comparison: '比较大小',
-        matching: '数字匹配'
-      }
-      
-      return areaMap[area] || area
-    },
-    
-    exportData() {
-      const exportData = StorageManager.exportUserData(this.currentUser.id)
-      
-      const report = {
-        version: '1.0',
-        exportDate: new Date().toISOString(),
-        userInfo: {
-          id: exportData.id,
-          username: exportData.username,
-          avatar: exportData.avatar,
-          stats: exportData.stats,
-          preferences: exportData.preferences
-        },
-        learningTrend: this.getWeeklyData(),
-        modeAnalysis: this.modeAnalysis,
-        timeDistribution: this.getTimeDistributionData(),
-        suggestions: this.learningSuggestions
-      }
-      
-      const dataStr = JSON.stringify(report, null, 2)
-      const dataBlob = new Blob([dataStr], { type: 'application/json' })
-      const url = URL.createObjectURL(dataBlob)
-      
-      const downloadLink = document.createElement('a')
-      downloadLink.href = url
-      downloadLink.download = `学习报告_${exportData.username}_${new Date().toISOString().split('T')[0]}.json`
-      downloadLink.click()
-      
-      URL.revokeObjectURL(url)
-    },
-    
-    resetData() {
-      if (confirm('确定要重置所有学习数据吗？此操作不可恢复！')) {
-        StorageManager.clearAllData()
-        this.$emit('reset-data')
       }
     }
+  })
+}
+
+const initModeChart = () => {
+  const ctx = document.getElementById('modeChart')?.getContext('2d')
+  if (!ctx) return
+  
+  const modeData = modeAnalysis.value
+  
+  modeChart.value = new Chart(ctx, {
+    type: 'doughnut',
+    data: {
+      labels: modeData.map(mode => mode.name),
+      datasets: [{
+        data: modeData.map(mode => mode.games),
+        backgroundColor: [
+          'rgba(102, 126, 234, 0.8)',
+          'rgba(82, 196, 26, 0.8)',
+          'rgba(255, 193, 7, 0.8)',
+          'rgba(255, 99, 132, 0.8)'
+        ],
+        borderColor: [
+          'rgba(102, 126, 234, 1)',
+          'rgba(82, 196, 26, 1)',
+          'rgba(255, 193, 7, 1)',
+          'rgba(255, 99, 132, 1)'
+        ],
+        borderWidth: 1
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        title: {
+          display: true,
+          text: '游戏模式分布',
+          font: {
+            size: 14,
+            weight: 'bold'
+          }
+        },
+        legend: {
+          position: 'bottom'
+        }
+      }
+    }
+  })
+}
+
+const initTimeChart = () => {
+  const ctx = document.getElementById('timeChart')?.getContext('2d')
+  if (!ctx) return
+  
+  const timeData = getTimeDistributionData()
+  
+  timeChart.value = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: timeData.labels,
+      datasets: [{
+        label: '学习时间（分钟）',
+        data: timeData.data,
+        backgroundColor: 'rgba(102, 126, 234, 0.8)',
+        borderColor: 'rgba(102, 126, 234, 1)',
+        borderWidth: 1
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        title: {
+          display: true,
+          text: '每日学习时间分布',
+          font: {
+            size: 14,
+            weight: 'bold'
+          }
+        }
+      },
+      scales: {
+        y: {
+          beginAtZero: true,
+          title: {
+            display: true,
+            text: '时间（分钟）'
+          }
+        },
+        x: {
+          title: {
+            display: true,
+            text: '星期'
+          }
+        }
+      }
+    }
+  })
+}
+
+const getWeeklyData = () => {
+  const labels = []
+  const games = []
+  const questions = []
+  const accuracy = []
+  
+  const today = new Date()
+  
+  for (let i = 6; i >= 0; i--) {
+    const date = new Date(today)
+    date.setDate(today.getDate() - i)
+    
+    const dateStr = date.toLocaleDateString('zh-CN', {
+      month: 'short',
+      day: 'numeric'
+    })
+    
+    labels.push(dateStr)
+    
+    // 模拟数据
+    const dayGames = Math.floor(Math.random() * 10)
+    const dayQuestions = Math.floor(Math.random() * 50)
+    const dayAccuracy = Math.floor(Math.random() * 50) + 50
+    
+    games.push(dayGames)
+    questions.push(dayQuestions)
+    accuracy.push(dayAccuracy)
+  }
+  
+  return { labels, games, questions, accuracy }
+}
+
+const getTimeDistributionData = () => {
+  const labels = ['周一', '周二', '周三', '周四', '周五', '周六', '周日']
+  const data = labels.map(() => Math.floor(Math.random() * 30) + 5)
+  return { labels, data }
+}
+
+const getPriorityText = (priority) => {
+  const priorityMap = {
+    high: '📌 高优先级',
+    medium: '⚠️ 中等优先级',
+    low: 'ℹ️ 低优先级'
+  }
+  
+  return priorityMap[priority] || 'ℹ️ 未知'
+}
+
+const exportData = () => {
+  const report = {
+    version: '1.0',
+    exportDate: new Date().toISOString(),
+    userInfo: {
+      stats: {
+        totalPlayTime: settings.totalPlayTime,
+        totalGamesPlayed: settings.totalGamesPlayed,
+        totalCorrectAnswers: settings.totalCorrectAnswers,
+        totalQuestionsAnswered: settings.totalQuestionsAnswered,
+        overallAccuracy: settings.overallAccuracy
+      }
+    },
+    learningTrend: getWeeklyData(),
+    modeAnalysis: modeAnalysis.value,
+    timeDistribution: getTimeDistributionData(),
+    suggestions: learningSuggestions.value
+  }
+  
+  const dataStr = JSON.stringify(report, null, 2)
+  const dataBlob = new Blob([dataStr], { type: 'application/json' })
+  const url = URL.createObjectURL(dataBlob)
+  
+  const downloadLink = document.createElement('a')
+  downloadLink.href = url
+  downloadLink.download = `学习报告_${new Date().toISOString().split('T')[0]}.json`
+  downloadLink.click()
+  
+  URL.revokeObjectURL(url)
+}
+
+const resetData = () => {
+  if (confirm('确定要重置所有学习数据吗？此操作不可恢复！')) {
+    settings.resetSettings()
+    game.resetGame()
   }
 }
+
+// 生命周期钩子
+onMounted(() => {
+  initCharts()
+})
+
+onBeforeUnmount(() => {
+  if (trendChart.value) {
+    trendChart.value.destroy()
+  }
+  if (modeChart.value) {
+    modeChart.value.destroy()
+  }
+  if (timeChart.value) {
+    timeChart.value.destroy()
+  }
+})
 </script>
 
 <style scoped>

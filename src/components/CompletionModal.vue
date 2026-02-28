@@ -1,165 +1,189 @@
 <template>
-  <div class="completion-modal" v-if="show">
-    <div class="modal-content animate">
-      <div class="completion-icon spin">🏆</div>
-      <div class="completion-title">恭喜完成练习！</div>
-      <div class="completion-message">
-        <div class="score-info pulse">得分：{{ finalScore }}分</div>
-        <div class="accuracy-info">正确率：{{ Math.round((correctAnswers / totalQuestions) * 100) }}%</div>
+  <div class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>{{ game.currentMode === 'adventure' ? '冒险完成！' : '练习完成！' }}</h2>
       </div>
-      <div class="completion-actions">
-        <button class="continue-button pulse" @click="continuePractice">
-          🔄 继续练习
-        </button>
-        <button class="back-button" @click="backToMenu">
-          ← 返回菜单
-        </button>
+      <div class="modal-body">
+        <div class="score-container">
+          <div class="score-circle">
+            <div class="score-number">{{ score }}</div>
+            <div class="score-label">分数</div>
+          </div>
+        </div>
+        <div class="stats">
+          <div class="stat-item">
+            <span class="stat-label">正确率</span>
+            <span class="stat-value">{{ accuracy }}%</span>
+          </div>
+        </div>
+        <div class="message">
+          <p>{{ message }}</p>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="back-button" @click="closeModal">返回主菜单</button>
       </div>
     </div>
   </div>
 </template>
 
-<script>
-export default {
-  name: 'CompletionModal',
-  props: {
-    show: {
-      type: Boolean,
-      default: false
-    },
-    finalScore: {
-      type: Number,
-      default: 0
-    },
-    correctAnswers: {
-      type: Number,
-      default: 0
-    },
-    totalQuestions: {
-      type: Number,
-      default: 5
-    }
+<script setup>
+import { useGameStore } from '../stores/gameStore'
+
+const props = defineProps({
+  score: {
+    type: Number,
+    required: true
   },
-  emits: ['continue-practice', 'back-to-menu'],
-  setup(props, { emit }) {
-    const continuePractice = () => {
-      emit('continue-practice')
-    }
-
-    const backToMenu = () => {
-      emit('back-to-menu')
-    }
-
-    return {
-      continuePractice,
-      backToMenu
-    }
+  accuracy: {
+    type: Number,
+    required: true
+  },
+  message: {
+    type: String,
+    required: true
   }
+})
+
+const game = useGameStore()
+
+const closeModal = () => {
+  game.closeCompletion()
 }
 </script>
 
 <style scoped>
-.completion-modal {
+.modal {
   position: fixed;
   top: 0;
   left: 0;
   width: 100%;
   height: 100%;
-  background: rgba(0,0,0,0.7);
+  background-color: rgba(0, 0, 0, 0.5);
   display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.modal-content {
+  background-color: white;
+  border-radius: 15px;
+  padding: 30px;
+  width: 90%;
+  max-width: 400px;
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+  animation: modalSlideIn 0.3s ease;
+  text-align: center;
+}
+
+.modal-header h2 {
+  font-size: 1.8rem;
+  margin-bottom: 20px;
+  color: #667eea;
+}
+
+.score-container {
+  margin-bottom: 30px;
+}
+
+.score-circle {
+  display: inline-flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
-  z-index: 1000;
-  animation: modalSlideIn 0.3s ease;
-}
-
-.completion-modal .modal-content {
-  background: linear-gradient(135deg, #a8e6cf, #dcedc1);
-  padding: 40px;
-  border-radius: 20px;
-  text-align: center;
-  max-width: 400px;
-  animation: modalSlideIn 0.3s ease;
-}
-
-.completion-icon {
-  font-size: 5rem;
-  margin-bottom: 20px;
-  animation: bounce 1s infinite;
-}
-
-.completion-icon.spin {
-  animation: spin 1s ease-in-out;
-}
-
-.completion-title {
-  font-size: 2rem;
-  font-weight: bold;
-  margin-bottom: 15px;
-  color: #333;
-}
-
-.completion-message {
-  margin: 20px 0;
-  font-size: 1.2rem;
-  color: #333;
-  line-height: 1.6;
-}
-
-.score-info {
-  margin-bottom: 10px;
-}
-
-.accuracy-info {
-  font-weight: bold;
-}
-
-.score-info.pulse {
-  animation: pulse 1s ease-in-out;
-}
-
-.completion-actions {
-  display: flex;
-  gap: 20px;
-  justify-content: center;
-  margin-top: 30px;
-  flex-wrap: wrap;
-}
-
-.continue-button {
-  background: linear-gradient(45deg, #FF6B6B, #FF8E53);
+  width: 150px;
+  height: 150px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   color: white;
-  padding: 15px 30px;
-  border: none;
-  border-radius: 25px;
-  font-size: 1.1rem;
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+}
+
+.score-number {
+  font-size: 2.5rem;
   font-weight: bold;
+  margin-bottom: 5px;
+}
+
+.score-label {
+  font-size: 1rem;
+  opacity: 0.9;
+}
+
+.stats {
+  display: flex;
+  justify-content: space-around;
+  margin-bottom: 20px;
+  padding: 20px;
+  background: #f5f5f5;
+  border-radius: 10px;
+}
+
+.stat-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.stat-label {
+  font-size: 0.9rem;
+  color: #666;
+  margin-bottom: 5px;
+}
+
+.stat-value {
+  font-size: 1.2rem;
+  font-weight: bold;
+  color: #333;
+}
+
+.stat-value.correct {
+  color: #52c41a;
+}
+
+.message {
+  margin-bottom: 30px;
+}
+
+.message p {
+  font-size: 1.1rem;
+  color: #333;
+}
+
+.modal-footer {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.restart-button,
+.back-button {
+  flex: 1;
+  padding: 12px;
+  border: none;
+  border-radius: 10px;
+  font-size: 1rem;
   cursor: pointer;
-  transition: transform 0.3s ease;
+  transition: all 0.3s ease;
 }
 
-.continue-button:hover {
-  transform: scale(1.05);
-}
-
-.continue-button.pulse {
-  animation: pulse 1s ease-in-out;
+.restart-button {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
 }
 
 .back-button {
-  background: linear-gradient(45deg, #667eea, #764ba2);
-  color: white;
-  padding: 15px 30px;
-  border: none;
-  border-radius: 25px;
-  font-size: 1.1rem;
-  font-weight: bold;
-  cursor: pointer;
-  transition: transform 0.3s ease;
+  background: #f5f5f5;
+  color: #333;
+  border: 1px solid #ddd;
 }
 
+.restart-button:hover,
 .back-button:hover {
   transform: scale(1.05);
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
 }
 
 @keyframes modalSlideIn {
@@ -170,39 +194,6 @@ export default {
   to {
     transform: translateY(0);
     opacity: 1;
-  }
-}
-
-@keyframes bounce {
-  0%, 20%, 50%, 80%, 100% {
-    transform: translateY(0);
-  }
-  40% {
-    transform: translateY(-20px);
-  }
-  60% {
-    transform: translateY(-10px);
-  }
-}
-
-@keyframes pulse {
-  0% {
-    transform: scale(1);
-  }
-  50% {
-    transform: scale(1.05);
-  }
-  100% {
-    transform: scale(1);
-  }
-}
-
-@keyframes spin {
-  0% {
-    transform: rotate(0deg);
-  }
-  100% {
-    transform: rotate(360deg);
   }
 }
 </style>

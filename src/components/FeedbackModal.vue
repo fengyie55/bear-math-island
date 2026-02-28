@@ -1,122 +1,126 @@
 <template>
-  <div class="feedback-modal" v-if="show">
-    <div class="modal-content" :class="{ 'correct': isCorrect, 'wrong': !isCorrect, 'animate': show }">
-      <div class="feedback-icon" :class="{ 'bounce': isCorrect }">{{ isCorrect ? '🎉' : '😊' }}</div>
-      <div class="feedback-title">{{ isCorrect ? '太棒了！' : '再试一次' }}</div>
-      <div class="feedback-text">{{ feedbackText }}</div>
-      <button class="next-button" @click="nextQuestion" :class="{ 'pulse': isCorrect }">
-        {{ isCorrect ? '下一题' : '再想想' }}
-      </button>
+  <div class="modal">
+    <div class="modal-content" :class="{ 'correct': correct, 'incorrect': !correct }">
+      <div class="modal-header">
+        <h2>{{ correct ? '回答正确！' : '回答错误' }}</h2>
+      </div>
+      <div class="modal-body">
+        <div v-if="correct" class="correct-message">
+          <div class="emoji">🎉</div>
+          <p>{{ message }}</p>
+        </div>
+        <div v-else class="incorrect-message">
+          <div class="emoji">😞</div>
+          <p>{{ message }}</p>
+        </div>
+      </div>
     </div>
   </div>
 </template>
 
-<script>
-export default {
-  name: 'FeedbackModal',
-  props: {
-    show: {
-      type: Boolean,
-      default: false
-    },
-    isCorrect: {
-      type: Boolean,
-      default: false
-    },
-    feedbackText: {
-      type: String,
-      default: ''
-    }
-  },
-  emits: ['next-question'],
-  setup(props, { emit }) {
-    const nextQuestion = () => {
-      emit('next-question')
-    }
+<script setup>
+import { useGameStore } from '../stores/gameStore'
 
-    return {
-      nextQuestion
-    }
+const props = defineProps({
+  correct: {
+    type: Boolean,
+    required: true
+  },
+  message: {
+    type: String,
+    required: true
   }
-}
+})
+
+const game = useGameStore()
 </script>
 
 <style scoped>
-.feedback-modal {
+.modal {
   position: fixed;
   top: 0;
   left: 0;
   width: 100%;
   height: 100%;
-  background: rgba(0,0,0,0.7);
+  background-color: rgba(0, 0, 0, 0.5);
   display: flex;
-  align-items: center;
   justify-content: center;
+  align-items: center;
   z-index: 1000;
 }
 
 .modal-content {
-  background: white;
-  color: #333;
-  padding: 40px;
-  border-radius: 20px;
-  text-align: center;
+  background-color: white;
+  border-radius: 15px;
+  padding: 30px;
+  width: 90%;
   max-width: 400px;
-  position: relative;
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
   animation: modalSlideIn 0.3s ease;
+  text-align: center;
 }
 
 .modal-content.correct {
-  background: linear-gradient(135deg, #a8e6cf, #dcedc1);
+  border: 4px solid #52c41a;
 }
 
-.modal-content.wrong {
-  background: linear-gradient(135deg, #ffd3b6, #ffaaa5);
+.modal-content.incorrect {
+  border: 4px solid #ff4d4f;
 }
 
-.feedback-icon {
+.modal-header h2 {
+  font-size: 1.8rem;
+  margin-bottom: 20px;
+}
+
+.modal-content.correct .modal-header h2 {
+  color: #52c41a;
+}
+
+.modal-content.incorrect .modal-header h2 {
+  color: #ff4d4f;
+}
+
+.modal-body {
+  margin-bottom: 30px;
+}
+
+.emoji {
   font-size: 4rem;
   margin-bottom: 20px;
 }
 
-.feedback-icon.bounce {
-  animation: bounce 1s ease-in-out;
-}
-
-.next-button.pulse {
-  animation: pulse 1s ease-in-out;
-}
-
-.modal-content.animate {
-  animation: modalSlideIn 0.5s ease-out;
-}
-
-.feedback-title {
-  font-size: 1.8rem;
-  font-weight: bold;
-  margin-bottom: 15px;
-}
-
-.feedback-text {
+.correct-message p,
+.incorrect-message p {
   font-size: 1.2rem;
-  margin-bottom: 25px;
-  line-height: 1.4;
+  margin-bottom: 10px;
+  color: #333;
+}
+
+.correct-answer {
+  font-weight: bold;
+  color: #ff4d4f;
+}
+
+.modal-footer {
+  display: flex;
+  justify-content: center;
 }
 
 .next-button {
-  background: linear-gradient(45deg, #667eea, #764ba2);
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   color: white;
-  padding: 15px 30px;
   border: none;
-  border-radius: 25px;
+  border-radius: 10px;
+  padding: 12px 30px;
   font-size: 1.1rem;
-  font-weight: bold;
   cursor: pointer;
-  transition: transform 0.3s ease;
+  transition: all 0.3s ease;
 }
 
 .next-button:hover {
   transform: scale(1.05);
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
 }
 
 @keyframes modalSlideIn {
@@ -127,30 +131,6 @@ export default {
   to {
     transform: translateY(0);
     opacity: 1;
-  }
-}
-
-@keyframes bounce {
-  0%, 20%, 50%, 80%, 100% {
-    transform: translateY(0);
-  }
-  40% {
-    transform: translateY(-20px);
-  }
-  60% {
-    transform: translateY(-10px);
-  }
-}
-
-@keyframes pulse {
-  0% {
-    transform: scale(1);
-  }
-  50% {
-    transform: scale(1.05);
-  }
-  100% {
-    transform: scale(1);
   }
 }
 </style>

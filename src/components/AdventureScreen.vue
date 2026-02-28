@@ -1,206 +1,192 @@
 <template>
   <div class="adventure-screen">
-    <div class="mode-content-header">
-      <div class="back-button" @click="backToMain">← 返回首页</div>
-      <div class="mode-content-title">🏝️ 冒险模式</div>
-      <div class="empty-space"></div>
+    <div class="header">
+      <button class="back-button" @click="goBack">← 返回</button>
+      <h1>冒险模式</h1>
     </div>
-
-    <div class="island-map">
-      <div class="island-area" v-for="(area, index) in islandMap.areas" :key="area.id">
-        <div class="area-icon" :class="{ 'unlocked': area.unlocked, 'locked': !area.unlocked }">
-          {{ getAreaIcon(area.id) }}
-        </div>
-        <div class="area-name">{{ area.name }}</div>
-        <div class="area-progress" v-if="area.unlocked">
-          <div class="progress-bar">
-            <div class="progress-fill" :style="{ width: area.completed ? '100%' : '0%' }"></div>
+    
+    <div class="map">
+      <div class="map-grid">
+        <div 
+          v-for="island in game.adventureProgress.islands" 
+          :key="island.id"
+          class="level-node"
+          :class="{ 'completed': island.completed, 'locked': !island.unlocked }"
+          @click="startLevel(island.id)"
+        >
+          <div class="level-number">{{ island.id }}</div>
+          <div class="level-name">{{ island.name }}</div>
+          <div v-if="island.completed" class="completed-badge">
+            <span v-for="star in 3" :key="star" class="star" :class="{ 'active': star <= island.stars }">★</span>
           </div>
-        </div>
-        <div class="start-button" v-if="area.unlocked" @click="startLevel(area.id)">
-          开始探索 🔍
-        </div>
-        <div class="locked-text" v-else>
-          🔒 待解锁
+          <div v-else-if="!island.unlocked" class="locked-badge">🔒</div>
         </div>
       </div>
     </div>
   </div>
 </template>
 
-<script>
-export default {
-  name: 'AdventureScreen',
-  props: {
-    islandMap: {
-      type: Object,
-      default: () => ({
-        areas: [
-          { id: 'orchard', name: '🍎 苹果园', unlocked: true, completed: false },
-          { id: 'beach', name: '🏖️ 沙滩', unlocked: false, completed: false },
-          { id: 'park', name: '🎢 游乐园', unlocked: false, completed: false },
-          { id: 'treehouse', name: '🌲 树屋', unlocked: false, completed: false },
-          { id: 'cave', name: '🔮 魔法山洞', unlocked: false, completed: false }
-        ]
-      })
-    }
-  },
-  emits: ['back-to-main', 'start-level'],
-  setup(props, { emit }) {
-    const backToMain = () => {
-      emit('back-to-main')
-    }
+<script setup>
+import { useGameStore } from '../stores/gameStore'
 
-    const getAreaIcon = (areaId) => {
-      const icons = {
-        orchard: '🍎',
-        beach: '🏖️',
-        park: '🎢',
-        treehouse: '🌲',
-        cave: '🔮'
-      }
-      return icons[areaId] || '📦'
-    }
+const game = useGameStore()
 
-    const startLevel = (areaId) => {
-      emit('start-level', areaId)
-    }
+const goBack = () => {
+  game.setScreen('main')
+}
 
-    return {
-      backToMain,
-      getAreaIcon,
-      startLevel
-    }
+const startLevel = (islandId) => {
+  const island = game.adventureProgress.islands.find(island => island.id === islandId)
+  if (island && island.unlocked) {
+    game.startAdventureMode(islandId)
   }
 }
 </script>
 
 <style scoped>
 .adventure-screen {
-  min-height: 100vh;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  display: flex;
+  flex-direction: column;
+  min-height: 80vh;
   padding: 20px;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  margin-bottom: 30px;
   color: white;
 }
 
-.adventure-screen .mode-content-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 40px;
-  padding: 0 20px;
-}
-
-.adventure-screen .mode-content-title {
-  font-size: 1.8rem;
-  font-weight: bold;
-  text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
-}
-
 .back-button {
-  background: rgba(255,255,255,0.1);
-  padding: 10px 20px;
-  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 5px;
+  padding: 8px 16px;
+  color: white;
   cursor: pointer;
+  margin-right: 20px;
   transition: all 0.3s ease;
-  font-size: 0.9rem;
 }
 
 .back-button:hover {
-  background: rgba(255,255,255,0.2);
+  background: rgba(255, 255, 255, 0.3);
 }
 
-.empty-space {
-  width: 80px; /* 占位空间，使标题居中 */
+.header h1 {
+  font-size: 2rem;
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
 }
 
-.island-map {
+.map {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.map-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 30px;
-  margin-bottom: 40px;
-}
-
-.island-area {
-  background: rgba(255,255,255,0.1);
-  border-radius: 20px;
-  padding: 30px;
-  backdrop-filter: blur(10px);
-  transition: transform 0.3s ease;
-}
-
-.island-area:hover {
-  transform: translateY(-10px);
-}
-
-.area-icon {
-  font-size: 3rem;
-  margin-bottom: 15px;
-  transition: transform 0.3s ease;
-}
-
-.area-icon.unlocked {
-  animation: bounce 2s infinite;
-}
-
-.area-icon.locked {
-  opacity: 0.5;
-  transform: scale(0.8);
-}
-
-@keyframes bounce {
-  0%, 100% { transform: scale(1); }
-  50% { transform: scale(1.1); }
-}
-
-.area-name {
-  font-size: 1.2rem;
-  font-weight: bold;
-  margin-bottom: 10px;
-}
-
-.area-progress {
-  margin: 15px 0;
-}
-
-.progress-bar {
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
+  max-width: 600px;
   width: 100%;
-  height: 8px;
-  background: rgba(255,255,255,0.3);
-  border-radius: 4px;
+}
+
+.level-node {
+  background: white;
+  border-radius: 15px;
+  padding: 20px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+  position: relative;
   overflow: hidden;
 }
 
-.progress-fill {
+.level-node::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
   height: 100%;
-  background: linear-gradient(90deg, #4CAF50, #8BC34A);
-  border-radius: 4px;
-  transition: width 0.5s ease;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  opacity: 0.8;
+  z-index: 1;
 }
 
-.start-button {
-  background: linear-gradient(45deg, #FF6B6B, #FF8E53);
-  padding: 12px 24px;
-  border-radius: 25px;
-  cursor: pointer;
-  margin: 15px 0;
-  font-weight: bold;
-  transition: transform 0.3s ease;
+.level-node * {
+  position: relative;
+  z-index: 2;
 }
 
-.start-button:hover {
-  transform: scale(1.05);
+.level-node:hover {
+  transform: translateY(-10px);
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
 }
 
-.locked-text {
+.level-node.locked {
   opacity: 0.6;
-  margin-top: 15px;
+  cursor: not-allowed;
+}
+
+.level-node.locked:hover {
+  transform: none;
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+}
+
+.level-number {
+  font-size: 2rem;
+  font-weight: bold;
+  color: white;
+  margin-bottom: 10px;
+}
+
+.level-name {
+  font-size: 1rem;
+  color: white;
+  margin-bottom: 10px;
+}
+
+.completed-badge {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background: rgba(255, 255, 255, 0.8);
+  border-radius: 15px;
+  padding: 5px 10px;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.star {
+  font-size: 1rem;
+  color: #ccc;
+  transition: all 0.3s ease;
+}
+
+.star.active {
+  color: #ffd700;
+  text-shadow: 0 0 5px rgba(255, 215, 0, 0.8);
+}
+
+.locked-badge {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  font-size: 1.5rem;
 }
 
 @media (max-width: 768px) {
-  .island-map {
+  .map-grid {
     grid-template-columns: repeat(2, 1fr);
-    gap: 15px;
+  }
+  
+  .header h1 {
+    font-size: 1.5rem;
   }
 }
 </style>
