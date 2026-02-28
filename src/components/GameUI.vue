@@ -541,6 +541,13 @@ function randEmoji(set = 'fruits') {
   return arr[Math.floor(Math.random() * arr.length)]
 }
 
+const ADD_SUB_SCENARIOS = [
+  { noun: '苹果', unit: '个', emoji: '🍎', scene: '🏠🍎' },
+  { noun: '鸭子', unit: '只', emoji: '🦆', scene: '🌊🦆' },
+  { noun: '花', unit: '朵', emoji: '🌸', scene: '🌻🌸' },
+  { noun: '糖', unit: '颗', emoji: '🍬', scene: '🐰🍬' },
+]
+
 function randInt(min, max) {
   return Math.floor(Math.random() * (max - min + 1)) + min
 }
@@ -597,27 +604,22 @@ function genCountQ(max = 5) {
 
 // 加法
 function genAddQ(max = 10) {
-  const half = Math.floor(max / 2)
   const a = randInt(0, max - 1)
   const b = randInt(1, max - a)
   if (a + b > max) return genAddQ(max)
-  const emojiA = randEmoji('fruits')
-  const emojiB = a === b ? randEmoji('animals') : randEmoji('fruits')
-  const stories = [
-    { story: `小熊有 ${a} 个苹果，妈妈又给了 ${b} 个。`, storyScene: '🏠🍎', a, b },
-    { story: `池塘里游来 ${a} 只鸭子，又游来 ${b} 只。`, storyScene: '🌊🦆', a, b },
-    { story: `花园里有 ${a} 朵花，又开了 ${b} 朵。`, storyScene: '🌻🌸', a, b },
-    { story: `碗里有 ${a} 颗糖，小兔又放了 ${b} 颗。`, storyScene: '🐰🍬', a, b },
+  const s = ADD_SUB_SCENARIOS[randInt(0, ADD_SUB_SCENARIOS.length - 1)]
+  const storyTemplates = [
+    `小熊有 ${a} ${s.unit}${s.noun}，妈妈又给了 ${b} ${s.unit}。`,
+    `这里有 ${a} ${s.unit}${s.noun}，又来了 ${b} ${s.unit}。`,
   ]
-  const s = stories[randInt(0, stories.length - 1)]
   return {
     text: `${a} ＋ ${b} ＝ ？`,
     displayText: `${a} ＋ ${b} ＝ ？`,
-    story: s.story,
-    storyScene: s.storyScene,
+    story: storyTemplates[randInt(0, storyTemplates.length - 1)],
+    storyScene: s.scene,
     visual: 'add',
-    itemsA: Array(a).fill(emojiA),
-    itemsB: Array(b).fill(emojiB),
+    itemsA: Array(a).fill(s.emoji),
+    itemsB: Array(b).fill(s.emoji),
     answer: a + b,
     a, b,
     type: 'choice',
@@ -630,21 +632,18 @@ function genSubQ(max = 10) {
   const total = randInt(2, max)
   const b = randInt(1, total)
   const answer = total - b
-  const emoji = randEmoji('fruits')
-  const stories = [
-    { story: `小熊有 ${total} 个苹果，吃掉了 ${b} 个，还剩几个？`, storyScene: '🐻🍎' },
-    { story: `树上有 ${total} 只小鸟，飞走了 ${b} 只，还剩几只？`, storyScene: '🌳🐦' },
-    { story: `盘子里有 ${total} 块饼干，小狗吃了 ${b} 块，还剩几块？`, storyScene: '🐶🍪' },
-    { story: `花瓶里有 ${total} 朵花，掉落了 ${b} 朵，还剩几朵？`, storyScene: '🌸💧' },
+  const s = ADD_SUB_SCENARIOS[randInt(0, ADD_SUB_SCENARIOS.length - 1)]
+  const storyTemplates = [
+    `小熊有 ${total} ${s.unit}${s.noun}，拿走了 ${b} ${s.unit}，还剩几个？`,
+    `这里原来有 ${total} ${s.unit}${s.noun}，减少了 ${b} ${s.unit}，还剩多少？`,
   ]
-  const s = stories[randInt(0, stories.length - 1)]
   return {
     text: `${total} － ${b} ＝ ？`,
     displayText: `${total} － ${b} ＝ ？`,
-    story: s.story,
-    storyScene: s.storyScene,
+    story: storyTemplates[randInt(0, storyTemplates.length - 1)],
+    storyScene: s.scene,
     visual: 'sub',
-    allItems: Array(total).fill(emoji),
+    allItems: Array(total).fill(s.emoji),
     answer,
     b,
     type: 'choice',
