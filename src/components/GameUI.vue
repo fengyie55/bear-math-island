@@ -1731,16 +1731,16 @@ export default {
 .spot-volcano { left: 42%; top: 155px; }
 
 .spot-bubble {
-  background: rgba(255,255,255,0.92);
+  background: rgba(255,255,255,0.98);
   backdrop-filter: blur(8px);
   border-radius: 20px;
   padding: 12px 14px;
   text-align: center;
   min-width: 90px;
-  box-shadow: 0 6px 20px rgba(0,0,0,0.12);
-  border: 2px solid rgba(255,255,255,0.8);
+  box-shadow: 0 8px 24px rgba(15,23,42,0.2);
+  border: 2px solid rgba(148,163,184,0.55);
   position: relative;
-  color: #333;
+  color: #1f2937;
 }
 .spot-bubble::after {
   content: '';
@@ -1755,17 +1755,23 @@ export default {
 .spot-done .spot-bubble { border-color: #4ade80; background: rgba(220,255,220,0.95); }
 
 .spot-emoji { font-size: 2rem; display: block; margin-bottom: 4px; }
-.spot-name { font-size: 0.78rem; font-weight: bold; color: #444; margin-bottom: 4px; }
-.spot-stars { font-size: 0.75rem; margin-bottom: 6px; }
+.spot-name { font-size: 0.78rem; font-weight: 700; color: #1f2937; margin-bottom: 4px; }
+.spot-stars { font-size: 0.75rem; margin-bottom: 6px; color: #334155; }
 .spot-lock { font-size: 1.1rem; }
 .spot-cta {
-  background: linear-gradient(45deg,#ff9a9e,#fecfef);
-  color: #333;
+  background: linear-gradient(45deg,#db2777,#7c3aed);
+  color: #fff;
   border-radius: 10px;
   padding: 4px 10px;
   font-size: 0.75rem;
   font-weight: bold;
   cursor: pointer;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.25);
+}
+
+.spot-locked .spot-bubble {
+  background: rgba(241,245,249,0.98);
+  border-color: rgba(148,163,184,0.7);
 }
 
 /* 装饰 */
@@ -1821,7 +1827,7 @@ export default {
 .nav-item.active .nav-icon { filter: none; }
 .nav-item.active .nav-label { color: #667eea; font-weight: bold; }
 .nav-icon { font-size: 1.5rem; }
-.nav-label { font-size: 0.7rem; color: #888; margin-top: 2px; }
+.nav-label { font-size: 0.7rem; color: #4b5563; margin-top: 2px; }
 
 /* ════════ 练习模式 ════════ */
 .practice-screen { min-height: 100vh; display: flex; flex-direction: column; }
