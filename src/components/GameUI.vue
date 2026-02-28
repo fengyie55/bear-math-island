@@ -2249,17 +2249,256 @@ button:focus-visible {
 @keyframes burstFly { 0%{transform:scale(0) rotate(0);opacity:1} 60%{opacity:1} 100%{transform:scale(1.2) rotate(360deg) translateY(-40px);opacity:0} }
 
 /* ════════ 响应式 ════════ */
+@media (max-width: 1024px) {
+  .main-topbar {
+    flex-wrap: wrap;
+    gap: 10px;
+    padding: 12px;
+  }
+
+  .topbar-stats {
+    order: 3;
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .island-panorama {
+    padding: 12px;
+  }
+
+  .island-scene {
+    min-height: 360px;
+  }
+
+  .spot-bubble {
+    min-width: 84px;
+    padding: 10px 12px;
+  }
+
+  .practice-scroll,
+  .parent-content {
+    padding-left: 12px;
+    padding-right: 12px;
+  }
+
+  .question-zone {
+    padding: 12px 12px 0;
+    margin-bottom: 20px;
+  }
+
+  .question-card {
+    padding: 24px 20px;
+    border-radius: 14px;
+  }
+
+  .q-text {
+    font-size: clamp(1.8rem, 4.5vw, 2rem);
+  }
+
+  .choice-grid {
+    gap: 12px;
+  }
+
+  .option-btn {
+    padding: 14px 10px;
+    font-size: 1.25rem;
+  }
+
+  .choice-val {
+    font-size: 1.75rem;
+  }
+
+  .ach-grid,
+  .pr-cards {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 768px) {
+  .child-select-screen {
+    justify-content: flex-start;
+    padding: 28px 14px 70px;
+  }
+
+  .cs-hero {
+    margin-bottom: 16px;
+  }
+
+  .hero-bear {
+    font-size: 3.8rem;
+  }
+
+  .hero-title {
+    font-size: 2rem;
+  }
+
+  .profiles-row {
+    width: 100%;
+    gap: 12px;
+  }
+
+  .profile-card {
+    flex: 1 1 calc(50% - 12px);
+    min-width: 0;
+  }
+
+  .main-topbar {
+    padding-top: calc(10px + env(safe-area-inset-top));
+  }
+
+  .player-chip {
+    max-width: calc(100% - 64px);
+  }
+
+  .topbar-stats {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  .ts-item {
+    text-align: center;
+    font-size: 0.82rem;
+  }
+
+  .island-panorama {
+    padding: 8px;
+  }
+
+  .island-scene {
+    min-height: 330px;
+  }
+
+  .spot-emoji {
+    font-size: 1.7rem;
+  }
+
+  .spot-name,
+  .spot-stars,
+  .spot-cta {
+    font-size: 0.7rem;
+  }
+
+  .spot-treehouse,
+  .spot-cave,
+  .spot-volcano {
+    top: 150px;
+  }
+
+  .page-header {
+    padding: 10px 12px;
+  }
+
+  .level-card {
+    padding: 12px;
+    align-items: flex-start;
+  }
+
+  .game-header {
+    padding: 10px 12px;
+    gap: 8px;
+  }
+
+  .game-score-chip {
+    font-size: 0.9rem;
+    padding: 5px 10px;
+  }
+
+  .question-zone {
+    padding: 8px 10px 0;
+    margin-bottom: 12px;
+  }
+
+  .question-card {
+    padding: 20px 14px 52px;
+  }
+
+  .q-text {
+    font-size: clamp(1.6rem, 7vw, 2rem);
+    margin-bottom: 12px;
+  }
+
+  .big-number {
+    font-size: 4.2rem;
+  }
+
+  .cmp-num {
+    width: 56px;
+    height: 56px;
+    font-size: 2.2rem;
+  }
+
+  .voice-fab {
+    width: 44px;
+    height: 44px;
+    bottom: 10px;
+    right: 10px;
+  }
+
+  .answer-zone {
+    padding: 0 10px 12px;
+  }
+
+  .choice-grid {
+    gap: 10px;
+  }
+
+  .option-btn {
+    min-height: 72px;
+    font-size: 1.1rem;
+    border-radius: 10px;
+  }
+
+  .sym-grid,
+  .num-grid {
+    gap: 10px;
+  }
+
+  .settings-modal,
+  .add-profile-modal {
+    width: 94%;
+    border-radius: 20px;
+  }
+}
+
 @media (max-width: 480px) {
+  .child-select-screen {
+    padding-top: 20px;
+  }
+
   .gp-label,.gp-count { display: none; }
   .island-map { grid-template-columns: repeat(2,1fr); }
-  .ach-grid { grid-template-columns: repeat(2,1fr); }
-  .pr-cards { grid-template-columns: repeat(2,1fr); }
+  .hero-bear { font-size: 3.2rem; }
   .choice-btn { font-size: 1.5rem; padding: 14px 8px; }
   .hero-title { font-size: 2rem; }
   .main-actions { grid-template-columns: repeat(2,1fr); }
-  .spot-orchard { left: 4%; }
-  .spot-park { right: 2%; }
+  .profiles-row { gap: 10px; }
+  .profile-card {
+    flex-basis: calc(50% - 10px);
+    padding: 12px 10px;
+  }
+  .profile-avatar { font-size: 2.4rem; }
+  .spot-orchard { left: 0; top: 22px; }
+  .spot-beach { left: 31%; }
+  .spot-park { right: 0; top: 24px; }
+  .spot-treehouse { left: 8%; }
+  .spot-cave { right: 10%; }
+  .spot-volcano { left: 36%; }
+  .spot-bubble { min-width: 74px; padding: 8px 9px; }
+  .bottom-nav { padding-top: 6px; }
+  .nav-icon { font-size: 1.35rem; }
+  .nav-label { font-size: 0.65rem; }
+  .game-header { align-items: flex-start; }
+  .game-score-chip { margin-top: 2px; }
+  .q-text { font-size: clamp(1.4rem, 8vw, 1.8rem); }
+  .count-item { font-size: 1.7rem; }
+  .count-item.sm { font-size: 1.2rem; }
+  .compare-visual { gap: 10px; }
+  .cmp-mid { font-size: 1.6rem; }
+  .option-btn { min-height: 64px; }
   .choice-val { font-size: 1.6rem; }
+  .pr-section { padding: 12px; }
+  .pr-title { font-size: 0.88rem; }
 }
 
 @media (min-height: 800px) {
