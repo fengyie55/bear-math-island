@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest'
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import StorageManager from './storage'
 
 const createLocalStorageMock = () => {
@@ -33,6 +33,7 @@ describe('StorageManager', () => {
 
   afterEach(() => {
     localStorage.clear()
+    vi.unstubAllGlobals()
   })
 
   it('should add a new user', () => {
@@ -110,15 +111,14 @@ describe('StorageManager', () => {
     expect(currentUser?.id).toBe(userId)
   })
 
-
-
   it('should clear all backup keys without skipping any entries', () => {
-    localStorage.setItem('bearMathIslandUsers_v1', JSON.stringify([{ username: 'testuser' }]))
-    localStorage.setItem('bearMathIslandCurrentUser_v1', 'user-id-1')
+    // 交错插入数据，覆盖“删除时遍历”最容易漏删的场景
     localStorage.setItem('bearMathIslandBackup_1', JSON.stringify({ version: '1.0' }))
-    localStorage.setItem('bearMathIslandBackup_2', JSON.stringify({ version: '1.0' }))
-    localStorage.setItem('bearMathIslandBackup_3', JSON.stringify({ version: '1.0' }))
     localStorage.setItem('unrelated_key', 'keep-me')
+    localStorage.setItem('bearMathIslandUsers_v1', JSON.stringify([{ username: 'testuser' }]))
+    localStorage.setItem('bearMathIslandBackup_2', JSON.stringify({ version: '1.0' }))
+    localStorage.setItem('bearMathIslandCurrentUser_v1', 'user-id-1')
+    localStorage.setItem('bearMathIslandBackup_3', JSON.stringify({ version: '1.0' }))
 
     const result = StorageManager.clearAllData()
 
@@ -130,6 +130,7 @@ describe('StorageManager', () => {
     expect(localStorage.getItem('bearMathIslandBackup_3')).toBeNull()
     expect(localStorage.getItem('unrelated_key')).toBe('keep-me')
   })
+
   it('should record game result', () => {
     const user = {
       username: 'testuser',
