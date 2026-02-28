@@ -66,18 +66,14 @@ npm run start
 ## 项目结构
 
 ```
-bear_math_island/
+bear-math-island/
 ├── src/
-│   ├── components/          # 可复用组件
-│   ├── views/              # 页面组件
-│   ├── router/             # 路由配置
-│   ├── store/              # 状态管理
-│   ├── utils/              # 工具函数
-│   ├── api/                # API 接口
-│   ├── assets/             # 静态资源
-│   ├── styles/             # 全局样式
-│   └── main.js             # 入口文件
-├── public/                 # 公共资源
+│   ├── components/          # Vue 界面组件
+│   ├── stores/              # 状态管理
+│   ├── utils/               # 工具函数
+│   ├── App.vue              # 根组件
+│   ├── main.ts              # TypeScript 入口
+│   └── style.css            # 全局样式
 ├── dist/                   # 生产构建产物
 ├── package.json           # 项目配置
 ├── vite.config.js         # Vite 配置
