@@ -199,7 +199,7 @@
           <div class="gp-label">{{ currentGameMode === 'adventure' ? currentAreaName : currentLevelName }}</div>
           <div class="gp-bar">
             <div class="gp-fill" :style="{ width: gameProgress + '%' }"></div>
-            <div class="gp-bear" :style="{ left: Math.max(0, gameProgress - 4) + '%' }">🐻</div>
+            <div class="gp-bear" :style="{ left: Math.min(98, Math.max(2, gameProgress)) + '%' }">🐻</div>
           </div>
           <div class="gp-count">{{ qIndex + 1 }}/{{ totalQ }}</div>
         </div>
@@ -1877,10 +1877,12 @@ export default {
 
 /* ════════ 游戏界面 ════════ */
 .game-screen {
+  height: 100dvh;
   min-height: 100vh;
   display: flex;
   flex-direction: column;
   transition: background 0.5s ease;
+  overflow: hidden;
 }
 
 .game-header {
@@ -1910,9 +1912,11 @@ export default {
 .gp-bear {
   position: absolute;
   top: -5px;
+  transform: translateX(-50%);
   font-size: 1.4rem;
   transition: left 0.5s ease;
   filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));
+  pointer-events: none;
 }
 .gp-count { font-size: 0.75rem; opacity: 0.8; margin-top: 3px; text-align: right; }
 .game-score-chip { background: rgba(255,215,0,0.3); border-radius: 16px; padding: 6px 12px; font-size: 1rem; font-weight: bold; border: 1px solid rgba(255,215,0,0.5); white-space: nowrap; }
