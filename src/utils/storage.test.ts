@@ -1,14 +1,37 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import StorageManager from './storage'
 
+const createLocalStorageMock = () => {
+  const store = new Map<string, string>()
+
+  return {
+    getItem: (key: string) => store.get(key) ?? null,
+    setItem: (key: string, value: string) => {
+      store.set(key, value)
+    },
+    removeItem: (key: string) => {
+      store.delete(key)
+    },
+    clear: () => {
+      store.clear()
+    },
+    key: (index: number) => Array.from(store.keys())[index] ?? null,
+    get length() {
+      return store.size
+    }
+  }
+}
+
 describe('StorageManager', () => {
   beforeEach(() => {
-    // 清除localStorage
-    localStorage.clear()
+    Object.defineProperty(globalThis, 'localStorage', {
+      value: createLocalStorageMock(),
+      configurable: true,
+      writable: true
+    })
   })
 
   afterEach(() => {
-    // 清除localStorage
     localStorage.clear()
   })
 
@@ -87,6 +110,26 @@ describe('StorageManager', () => {
     expect(currentUser?.id).toBe(userId)
   })
 
+
+
+  it('should clear all backup keys without skipping any entries', () => {
+    localStorage.setItem('bearMathIslandUsers_v1', JSON.stringify([{ username: 'testuser' }]))
+    localStorage.setItem('bearMathIslandCurrentUser_v1', 'user-id-1')
+    localStorage.setItem('bearMathIslandBackup_1', JSON.stringify({ version: '1.0' }))
+    localStorage.setItem('bearMathIslandBackup_2', JSON.stringify({ version: '1.0' }))
+    localStorage.setItem('bearMathIslandBackup_3', JSON.stringify({ version: '1.0' }))
+    localStorage.setItem('unrelated_key', 'keep-me')
+
+    const result = StorageManager.clearAllData()
+
+    expect(result).toBe(true)
+    expect(localStorage.getItem('bearMathIslandUsers_v1')).toBeNull()
+    expect(localStorage.getItem('bearMathIslandCurrentUser_v1')).toBeNull()
+    expect(localStorage.getItem('bearMathIslandBackup_1')).toBeNull()
+    expect(localStorage.getItem('bearMathIslandBackup_2')).toBeNull()
+    expect(localStorage.getItem('bearMathIslandBackup_3')).toBeNull()
+    expect(localStorage.getItem('unrelated_key')).toBe('keep-me')
+  })
   it('should record game result', () => {
     const user = {
       username: 'testuser',

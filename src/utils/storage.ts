@@ -513,13 +513,18 @@ class StorageManager {
     try {
       localStorage.removeItem(this.USERS_KEY)
       localStorage.removeItem(this.CURRENT_USER_KEY)
-      
+
+      const backupKeys: string[] = []
       for (let i = 0; i < localStorage.length; i++) {
         const key = localStorage.key(i)
         if (key && key.startsWith('bearMathIslandBackup_')) {
-          localStorage.removeItem(key)
+          backupKeys.push(key)
         }
       }
+
+      backupKeys.forEach(key => {
+        localStorage.removeItem(key)
+      })
       
       return true
     } catch (error) {
