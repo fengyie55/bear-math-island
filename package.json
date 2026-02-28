@@ -4,15 +4,11 @@
   "description": "小熊算数岛 - 3-6岁儿童数学学习应用",
   "main": "index.js",
   "scripts": {
-    "dev": "vite --config vite.config.dev.js",
-    "dev:prod": "vite",
+    "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview",
-    "start": "vite preview --port 3000 --host 0.0.0.0"
+    "preview": "vite preview"
   },
   "dependencies": {
-    "ant-design-vue": "^4.0.0",
-    "chart.js": "^4.5.1",
     "vue": "^3.3.4"
   },
   "devDependencies": {
