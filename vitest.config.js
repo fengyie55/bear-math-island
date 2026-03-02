@@ -5,7 +5,7 @@ export default defineConfig({
   plugins: [vue()],
   test: {
     globals: true,
-    environment: 'jsdom',
+    environment: 'node',
     coverage: {
       reporter: ['text', 'json', 'html'],
       include: ['src/**/*.{ts,js,vue}'],
