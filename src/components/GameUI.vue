@@ -1,185 +1,173 @@
 <template>
   <div class="app-root" :class="{ 'warm-mode': settings.eyeProtection }">
 
-    <!-- ══════════════════════════════════════ 儿童选择界面 ══════════════════════════════════════ -->
-    <transition name="screen-fade">
-    <div v-if="screen === 'child-select'" class="child-select-screen">
-      <div class="clouds">
-        <div class="cloud c1">☁️</div>
-        <div class="cloud c2">☁️</div>
-        <div class="cloud c3">⛅</div>
+    <!-- ━━━━━━━━━━━━━━━━━━━━━━━ 选择小朋友 ━━━━━━━━━━━━━━━━━━━━━━━ -->
+    <transition name="fade-up">
+    <div v-if="screen === 'child-select'" class="select-screen">
+      <div class="sky-deco">
+        <span class="deco-cloud" style="left:5%;top:10%;animation-delay:0s">☁️</span>
+        <span class="deco-cloud" style="left:55%;top:6%;animation-delay:2s">☁️</span>
+        <span class="deco-cloud" style="right:8%;top:15%;animation-delay:1s">⛅</span>
+        <span class="deco-sun">☀️</span>
       </div>
-      <div class="cs-hero">
-        <div class="hero-bear">🐻</div>
-        <h1 class="hero-title">小熊海岛</h1>
-        <p class="hero-sub">数学大冒险</p>
+      <div class="select-hero">
+        <div class="hero-bear" @click="playWelcome">🐻</div>
+        <h1 class="hero-title">小熊数学岛</h1>
+        <p class="hero-tagline">快来和小熊一起学数学吧！</p>
       </div>
-      <div class="cs-prompt">小朋友，点击你的头像开始！</div>
-      <div class="profiles-row">
-        <div
-          v-for="profile in profiles"
-          :key="profile.id"
-          class="profile-card"
-          @click="selectProfile(profile)"
-        >
-          <div class="profile-avatar">{{ profile.avatar }}</div>
-          <div class="profile-name">{{ profile.name }}</div>
-          <div class="profile-stars">⭐ {{ profile.totalScore }}</div>
+
+      <p class="select-hint" v-if="profiles.length > 0">小朋友，点你的头像👇</p>
+      <p class="select-hint" v-else>欢迎！先创建一个小朋友的账号吧 🎉</p>
+
+      <div class="profiles-grid">
+        <div v-for="p in profiles" :key="p.id" class="profile-btn" @click="selectProfile(p)">
+          <div class="pb-avatar">{{ p.avatar }}</div>
+          <div class="pb-name">{{ p.name }}</div>
+          <div class="pb-info">
+            <span>⭐{{ p.totalScore }}</span>
+            <span>🔥{{ p.streakDays }}天</span>
+          </div>
         </div>
-        <div class="profile-card add-card" @click="showAddProfile = true" v-if="profiles.length < 4">
-          <div class="profile-avatar">➕</div>
-          <div class="profile-name">新小朋友</div>
+        <div class="profile-btn add-btn" @click="showAddProfile=true" v-if="profiles.length < 4">
+          <div class="pb-avatar add-av">＋</div>
+          <div class="pb-name">新小朋友</div>
         </div>
       </div>
-      <div class="parent-entry" @click="screen = 'parent'">👨‍👩‍👧 家长报告</div>
+
+      <div class="parent-portal" @click="openParent">
+        🔑 家长入口
+      </div>
     </div>
     </transition>
 
-    <!-- ══════════════════════════════════════ 新建用户弹窗 ══════════════════════════════════════ -->
-    <div class="modal-backdrop" v-if="showAddProfile" @click.self="showAddProfile = false">
-      <div class="add-profile-modal">
-        <h2>创建小朋友的账号</h2>
-        <div class="avatar-picker">
-          <div
-            v-for="av in avatarOptions" :key="av"
-            class="av-opt"
-            :class="{ selected: newProfile.avatar === av }"
-            @click="newProfile.avatar = av"
-          >{{ av }}</div>
+    <!-- ━━━━━━━━━━━━━━━━━━━━━━━ 创建账号弹窗 ━━━━━━━━━━━━━━━━━━━━━━━ -->
+    <div class="modal-bg" v-if="showAddProfile" @click.self="showAddProfile=false">
+      <div class="add-modal">
+        <div class="add-modal-title">🐾 创建我的账号</div>
+        <div class="avi-grid">
+          <div v-for="av in AVATARS" :key="av"
+            class="avi-item" :class="{active: newP.avatar===av}"
+            @click="newP.avatar=av">{{ av }}</div>
         </div>
-        <input
-          class="name-input"
-          v-model="newProfile.name"
-          placeholder="输入名字（最多5个字）"
-          maxlength="5"
-        />
+        <div class="field-label">你叫什么名字？</div>
+        <input class="name-field" v-model="newP.name" placeholder="输入名字" maxlength="5"/>
+        <div class="field-label">你几岁了？</div>
         <div class="age-row">
-          <span>年龄：</span>
-          <div class="age-btn" v-for="a in [3,4,5,6]" :key="a"
-            :class="{ active: newProfile.age === a }"
-            @click="newProfile.age = a">{{ a }}岁</div>
+          <div v-for="a in [3,4,5,6]" :key="a"
+            class="age-chip" :class="{active:newP.age===a}"
+            @click="newP.age=a">{{ a }}岁</div>
         </div>
-        <button class="confirm-btn" @click="createProfile" :disabled="!newProfile.name.trim()">
-          🎉 出发！
+        <button class="big-btn green" @click="createProfile" :disabled="!newP.name.trim()">
+          🚀 出发！
         </button>
       </div>
     </div>
 
-    <!-- ══════════════════════════════════════ 主页 ══════════════════════════════════════ -->
-    <transition name="screen-fade">
-    <div v-if="screen === 'main'" class="main-screen">
-      <!-- 天空背景 -->
-      <div class="sky-bg">
-        <div class="sun">☀️</div>
-        <div class="cloud mc1">☁️</div>
-        <div class="cloud mc2">⛅</div>
-        <div class="birds">🐦 🐦</div>
-      </div>
+    <!-- ━━━━━━━━━━━━━━━━━━━━━━━ 主页 ━━━━━━━━━━━━━━━━━━━━━━━ -->
+    <transition name="fade-up">
+    <div v-if="screen==='main'" class="main-screen">
 
-      <!-- 顶部栏 -->
-      <div class="main-topbar">
-        <div class="player-chip" @click="screen = 'child-select'">
-          <span class="chip-av">{{ currentProfile.avatar }}</span>
-          <span class="chip-name">{{ currentProfile.name }}</span>
+      <!-- 顶栏 -->
+      <div class="main-top">
+        <div class="player-chip" @click="screen='child-select'">
+          <span class="pc-av">{{ curP.avatar }}</span>
+          <span class="pc-name">{{ curP.name }}</span>
         </div>
-        <div class="topbar-stats">
-          <span class="ts-item">⭐ {{ currentProfile.totalScore }}</span>
-          <span class="ts-item">🔥 {{ currentProfile.streakDays }}天</span>
-          <span class="ts-item time-chip" :class="{ urgent: remainingSeconds < 120 }">
-            ⏰ {{ remainingTimeStr }}
+        <div class="top-stats">
+          <span class="stat-pill star">⭐ {{ curP.totalScore }}</span>
+          <span class="stat-pill fire">🔥 {{ curP.streakDays }}天</span>
+          <span class="stat-pill time" :class="{urgent: remSecs < 120}">
+            ⏰ {{ remTimeStr }}
           </span>
         </div>
-        <button class="icon-btn" @click="showSettings = true">⚙️</button>
+        <button class="icon-btn" @click="showSettings=true" aria-label="设置">⚙️</button>
       </div>
 
-      <!-- 海岛全景 -->
-      <div class="island-panorama">
-        <div class="island-scene">
-          <!-- 各个区域作为场景元素 -->
+      <!-- 海岛地图 -->
+      <div class="island-wrap">
+        <div class="island-bg-sky">
+          <span class="ib-cloud" style="left:8%;animation-delay:0s">☁️</span>
+          <span class="ib-cloud" style="left:45%;animation-delay:3s">⛅</span>
+          <span class="ib-cloud" style="right:5%;animation-delay:1.5s">☁️</span>
+          <span class="ib-bird">🐦🐦</span>
+        </div>
+        <div class="island-map">
           <div
             v-for="area in islandAreas"
             :key="area.id"
-            class="scene-spot"
-            :class="[`spot-${area.id}`, { 'spot-locked': !area.unlocked, 'spot-done': area.completed }]"
-            @click="area.unlocked ? enterArea(area) : null"
+            class="island-node"
+            :class="{ unlocked: area.unlocked, locked: !area.unlocked, done: area.completed }"
+            @click="area.unlocked ? startArea(area) : onClickLocked(area)"
           >
-            <div class="spot-bubble">
-              <div class="spot-emoji">{{ area.emoji }}</div>
-              <div class="spot-name">{{ area.name }}</div>
-              <div class="spot-stars" v-if="area.unlocked">
-                <span v-for="n in 3" :key="n">{{ n <= area.stars ? '⭐' : '✦' }}</span>
+            <div class="in-bubble">
+              <div class="in-emoji">{{ area.emoji }}</div>
+              <div class="in-name">{{ area.name }}</div>
+              <div class="in-stars" v-if="area.unlocked">
+                <span v-for="n in 3" :key="n">{{ n<=area.stars ? '⭐' : '☆' }}</span>
               </div>
-              <div class="spot-lock" v-if="!area.unlocked">🔒</div>
-              <div class="spot-cta" v-if="area.unlocked">
-                {{ area.completed ? '再玩！' : '出发！' }}
-              </div>
+              <div class="in-lock" v-if="!area.unlocked">🔒</div>
             </div>
+            <div class="in-path-dot" v-if="area.unlocked">●</div>
           </div>
-
-          <!-- 小熊角色 -->
-          <div class="bear-character" :class="{ 'bear-walk': bearWalking }">🐻</div>
-          <!-- 装饰 -->
-          <div class="deco-tree t1">🌴</div>
-          <div class="deco-tree t2">🌳</div>
-          <div class="deco-tree t3">🌲</div>
-          <div class="deco-flower f1">🌸</div>
-          <div class="deco-flower f2">🌺</div>
-          <div class="deco-ocean">🌊🌊🌊🌊🌊</div>
+        </div>
+        <!-- 装饰 -->
+        <div class="map-deco">
+          <span class="md-tree" style="left:3%;bottom:12%">🌴</span>
+          <span class="md-tree" style="right:4%;bottom:18%">🌳</span>
+          <span class="md-tree" style="left:48%;bottom:8%">🌲</span>
+          <span class="md-flower" style="left:20%;bottom:10%">🌸</span>
+          <span class="md-flower" style="right:22%;bottom:14%">🌺</span>
+          <span class="md-bear" :class="{walk: bearWalk}">🐻</span>
+          <span class="md-ocean">🌊🌊🌊🌊🌊🌊🌊</span>
         </div>
       </div>
 
       <!-- 底部导航 -->
-      <div class="bottom-nav">
-        <div class="nav-item active">
-          <div class="nav-icon">🏝️</div>
-          <div class="nav-label">海岛</div>
+      <nav class="main-nav">
+        <div class="nav-tab active" @click="playBop">
+          <span class="nt-ico">🏝️</span><span class="nt-lbl">海岛</span>
         </div>
-        <div class="nav-item" @click="screen = 'practice'">
-          <div class="nav-icon">📚</div>
-          <div class="nav-label">练习</div>
+        <div class="nav-tab" @click="screen='practice'">
+          <span class="nt-ico">📚</span><span class="nt-lbl">练习</span>
         </div>
-        <div class="nav-item" @click="screen = 'achievements'">
-          <div class="nav-icon">🏅</div>
-          <div class="nav-label">成就</div>
+        <div class="nav-tab" @click="screen='achievements'">
+          <span class="nt-ico">🏅</span><span class="nt-lbl">成就</span>
         </div>
-        <div class="nav-item" @click="screen = 'parent'">
-          <div class="nav-icon">👨‍👩‍👧</div>
-          <div class="nav-label">报告</div>
+        <div class="nav-tab" @click="openParent">
+          <span class="nt-ico">👨‍👩‍👧</span><span class="nt-lbl">报告</span>
         </div>
-      </div>
+      </nav>
     </div>
     </transition>
 
-    <!-- ══════════════════════════════════════ 练习模式 ══════════════════════════════════════ -->
-    <transition name="screen-fade">
-    <div v-if="screen === 'practice'" class="practice-screen">
-      <div class="page-header">
-        <button class="back-btn" @click="screen = 'main'">◀ 返回</button>
+    <!-- ━━━━━━━━━━━━━━━━━━━━━━━ 练习大厅 ━━━━━━━━━━━━━━━━━━━━━━━ -->
+    <transition name="fade-up">
+    <div v-if="screen==='practice'" class="practice-screen">
+      <div class="pg-header">
+        <button class="back-btn" @click="screen='main'">◀ 返回</button>
         <h2>📚 练习题库</h2>
-        <div class="header-score">⭐ {{ currentProfile.totalScore }}</div>
+        <span class="header-score">⭐{{ curP.totalScore }}</span>
       </div>
-
-      <div class="practice-scroll">
-        <div class="practice-category" v-for="cat in practiceCategories" :key="cat.title">
-          <div class="cat-header">
-            <span class="cat-emoji">{{ cat.emoji }}</span>
-            <span class="cat-title">{{ cat.title }}</span>
-            <span class="cat-age">{{ cat.ageHint }}</span>
+      <div class="practice-list">
+        <div v-for="cat in CATS" :key="cat.title" class="pcat">
+          <div class="pcat-head">
+            <span class="pch-ico">{{ cat.emoji }}</span>
+            <span class="pch-title">{{ cat.title }}</span>
+            <span class="pch-age">{{ cat.age }}</span>
           </div>
-          <div class="cat-levels">
+          <div class="pcat-levels">
             <div
-              class="level-card"
-              v-for="level in cat.levels"
-              :key="level.key"
-              @click="startPractice(level)"
+              v-for="lv in cat.levels" :key="lv.key"
+              class="level-row"
+              @click="launchPractice(lv)"
             >
-              <div class="level-icon">{{ level.icon }}</div>
-              <div class="level-info">
-                <div class="level-name">{{ level.name }}</div>
-                <div class="level-desc">{{ level.desc }}</div>
+              <span class="lr-ico">{{ lv.icon }}</span>
+              <div class="lr-info">
+                <div class="lr-name">{{ lv.name }}</div>
+                <div class="lr-desc">{{ lv.desc }}</div>
               </div>
-              <div class="level-stars">
-                <span v-for="n in 3" :key="n">{{ n <= (currentProfile.levelStars?.[level.key] || 0) ? '⭐' : '✦' }}</span>
+              <div class="lr-stars">
+                <span v-for="n in 3" :key="n">{{ n<=(curP.levelStars?.[lv.key]||0)?'⭐':'☆' }}</span>
               </div>
             </div>
           </div>
@@ -188,335 +176,352 @@
     </div>
     </transition>
 
-    <!-- ══════════════════════════════════════ 游戏答题 ══════════════════════════════════════ -->
-    <transition name="screen-fade">
-    <div v-if="screen === 'game'" class="game-screen" :style="{ background: gameBg }">
+    <!-- ━━━━━━━━━━━━━━━━━━━━━━━ 答题界面 ━━━━━━━━━━━━━━━━━━━━━━━ -->
+    <transition name="fade-up">
+    <div v-if="screen==='game'" class="game-screen" :style="{background: gameBg}">
 
-      <!-- 顶部 -->
-      <div class="game-header">
-        <button class="back-btn ghost" @click="confirmExit">◀</button>
-        <div class="game-progress-wrap">
-          <div class="gp-label">{{ currentGameMode === 'adventure' ? currentAreaName : currentLevelName }}</div>
+      <!-- 进度条顶栏 -->
+      <div class="game-top">
+        <button class="back-btn ghost" @click="exitGame">◀</button>
+        <div class="gp-wrap">
+          <div class="gp-title">{{ gameTitle }}</div>
           <div class="gp-bar">
-            <div class="gp-fill" :style="{ width: gameProgress + '%' }"></div>
-            <div class="gp-bear" :style="{ left: Math.max(0, gameProgress - 4) + '%' }">🐻</div>
+            <div class="gp-fill" :style="{width: gProgress+'%'}"></div>
+            <div class="gp-bear" :style="{left: Math.max(0, gProgress-5)+'%'}">🐻</div>
           </div>
-          <div class="gp-count">{{ qIndex + 1 }}/{{ totalQ }}</div>
         </div>
-        <div class="game-score-chip">⭐ {{ gameScore }}</div>
+        <div class="game-score-tag">⭐{{ gScore }}</div>
       </div>
 
       <!-- 题目卡 -->
-      <div class="question-zone">
-        <transition name="q-slide" mode="out-in">
-        <div class="question-card" :key="qKey" :class="{ shake: shaking }">
+      <div class="q-zone">
+        <transition name="q-swap" mode="out-in">
+        <div class="q-card" :key="qKey" :class="{shake: shaking}">
 
-          <!-- 故事情境（冒险模式） -->
-          <div class="story-context" v-if="currentQ.story">
-            <div class="story-scene">{{ currentQ.storyScene }}</div>
-            <div class="story-text">{{ currentQ.story }}</div>
+          <!-- 故事句（图文一致） -->
+          <div class="story-box" v-if="cQ.story">
+            <span class="story-icon">{{ cQ.storyIcon }}</span>
+            <span class="story-text">{{ cQ.story }}</span>
+            <button class="voice-mini" @click="speakStory" title="朗读故事">🔊</button>
           </div>
 
-          <!-- 题目文字 -->
-          <div class="q-text">{{ currentQ.displayText || currentQ.text }}</div>
+          <!-- 题目问句（大字） -->
+          <div class="q-question">{{ cQ.question }}</div>
 
-          <!-- 视觉辅助区 -->
-          <div class="q-visual" v-if="currentQ.visual">
+          <!-- ── 视觉辅助区 ── -->
 
-            <!-- 数数类：可数的物品展示 -->
-            <div class="count-visual" v-if="currentQ.visual === 'count'">
-              <transition-group name="item-pop" tag="div" class="items-grid">
-                <span
-                  v-for="(item, i) in currentQ.items"
-                  :key="i"
-                  class="count-item"
-                  :style="{ animationDelay: i * 0.08 + 's' }"
-                >{{ item }}</span>
-              </transition-group>
-            </div>
+          <!-- 数数：单组物品 -->
+          <div v-if="cQ.vtype==='count'" class="v-count">
+            <span
+              v-for="(it,i) in cQ.items" :key="i"
+              class="vitem big"
+              :style="{animationDelay: i*0.07+'s'}"
+            >{{ it }}</span>
+          </div>
 
-            <!-- 加法：两组物品 -->
-            <div class="add-visual" v-else-if="currentQ.visual === 'add'">
-              <div class="add-group">
-                <span v-for="(it, i) in currentQ.itemsA" :key="'a'+i" class="count-item">{{ it }}</span>
+          <!-- 加法：两组+合并演示 -->
+          <div v-else-if="cQ.vtype==='add'" class="v-add">
+            <div class="va-group">
+              <div class="va-items">
+                <span v-for="(it,i) in cQ.itemsA" :key="'a'+i" class="vitem">{{ it }}</span>
               </div>
-              <div class="plus-sign">➕</div>
-              <div class="add-group">
-                <span v-for="(it, i) in currentQ.itemsB" :key="'b'+i" class="count-item">{{ it }}</span>
+              <div class="va-label">{{ cQ.a }}个</div>
+            </div>
+            <div class="va-plus">＋</div>
+            <div class="va-group">
+              <div class="va-items">
+                <span v-for="(it,i) in cQ.itemsB" :key="'b'+i" class="vitem">{{ it }}</span>
               </div>
-              <div class="equals-sign">＝</div>
-              <div class="q-mark">？</div>
+              <div class="va-label">{{ cQ.b }}个</div>
             </div>
+            <div class="va-eq">＝</div>
+            <div class="va-qmark">？</div>
+          </div>
 
-            <!-- 减法：划掉 -->
-            <div class="sub-visual" v-else-if="currentQ.visual === 'sub'">
-              <div class="sub-group">
-                <span
-                  v-for="(it, i) in currentQ.allItems"
-                  :key="i"
-                  class="count-item"
-                  :class="{ crossed: i >= currentQ.answer }"
-                >{{ it }}</span>
+          <!-- 减法：全部展示，被减部分动态划掉 -->
+          <div v-else-if="cQ.vtype==='sub'" class="v-sub">
+            <div class="vs-row">
+              <span
+                v-for="(it,i) in cQ.allItems" :key="i"
+                class="vitem"
+                :class="{ crossed: i >= cQ.keep }"
+              >{{ it }}</span>
+            </div>
+            <div class="vs-hint">✂️ 去掉了 {{ cQ.b }} 个{{ cQ.itemEmoji }}，还剩几个？</div>
+          </div>
+
+          <!-- 乘法："几排几个"分组 -->
+          <div v-else-if="cQ.vtype==='mul'" class="v-mul">
+            <div class="vm-row" v-for="(grp,gi) in cQ.groups" :key="gi">
+              <div class="vm-group">
+                <span v-for="(it,ii) in grp" :key="ii" class="vitem">{{ it }}</span>
               </div>
-              <div class="sub-hint">（去掉了 {{ currentQ.b }} 个）</div>
+              <div class="vm-arrow" v-if="gi===0">← {{ cQ.a }}个一组</div>
             </div>
+            <div class="vm-desc">共 {{ cQ.b }} 组，每组 {{ cQ.a }} 个</div>
+          </div>
 
-            <!-- 乘法：分组展示 "几个几" -->
-            <div class="mul-visual" v-else-if="currentQ.visual === 'mul'">
-              <div class="mul-row" v-for="(grp, gi) in currentQ.groups" :key="gi">
-                <div class="mul-group">
-                  <span v-for="(it, ii) in grp" :key="ii" class="count-item">{{ it }}</span>
-                </div>
-                <div class="mul-sep" v-if="gi < currentQ.groups.length - 1">│</div>
-              </div>
-              <div class="mul-desc">{{ currentQ.mulDesc }}</div>
-            </div>
-
-            <!-- 数字认识：大数字配物品 -->
-            <div class="number-visual" v-else-if="currentQ.visual === 'number'">
-              <div class="big-number">{{ currentQ.displayNumber }}</div>
-              <div class="number-items">
-                <span v-for="(it, i) in currentQ.items" :key="i" class="count-item sm">{{ it }}</span>
+          <!-- 比大小：天平视觉 -->
+          <div v-else-if="cQ.vtype==='compare'" class="v-compare">
+            <div class="vc-side">
+              <div class="vc-num">{{ cQ.numA }}</div>
+              <div class="vc-dots">
+                <span v-for="n in cQ.numA" :key="n" class="vc-dot">●</span>
               </div>
             </div>
-
-            <!-- 比大小 -->
-            <div class="compare-visual" v-else-if="currentQ.visual === 'compare'">
-              <div class="cmp-num">{{ currentQ.numA }}</div>
-              <div class="cmp-mid">___</div>
-              <div class="cmp-num">{{ currentQ.numB }}</div>
+            <div class="vc-mid">
+              <div class="vc-scale">⚖️</div>
+              <div class="vc-blank">___</div>
             </div>
+            <div class="vc-side">
+              <div class="vc-num">{{ cQ.numB }}</div>
+              <div class="vc-dots">
+                <span v-for="n in cQ.numB" :key="n" class="vc-dot">●</span>
+              </div>
+            </div>
+          </div>
 
-          </div><!-- end visual -->
-
-          <!-- 语音按钮 -->
-          <button class="voice-fab" @click="speakQuestion">🔊</button>
         </div>
         </transition>
       </div>
 
-      <!-- 答案区 -->
+      <!-- 选项区 -->
       <div class="answer-zone">
-        <!-- 选择类答案 -->
-        <div class="choice-grid" v-if="currentQ.type === 'choice'">
+        <!-- 数字选项 -->
+        <div class="choice-grid" v-if="cQ.type==='choice'">
           <button
-            v-for="(opt, i) in currentQ.options"
-            :key="i"
+            v-for="(opt,i) in cQ.options" :key="i"
             class="choice-btn"
             :class="{
-              'chosen': chosen === i,
-              'correct': answered && opt === currentQ.answer,
-              'wrong': answered && chosen === i && opt !== currentQ.answer
+              chosen: chosen===i,
+              correct: answered && opt===cQ.answer,
+              wrong: answered && chosen===i && opt!==cQ.answer
             }"
-            @click="pickAnswer(opt, i)"
+            @click="pick(opt,i)"
             :disabled="answered"
-          >
-            <span class="choice-emoji" v-if="opt.emoji">{{ opt.emoji }}</span>
-            <span class="choice-val">{{ typeof opt === 'object' ? opt.label : opt }}</span>
-          </button>
+          >{{ opt }}</button>
         </div>
 
-        <!-- 排序类（比大小用符号选择） -->
-        <div class="symbol-choice" v-if="currentQ.type === 'symbol'">
+        <!-- 符号选项（比大小） -->
+        <div class="sym-grid" v-else-if="cQ.type==='symbol'">
           <button
-            v-for="sym in ['＜', '＝', '＞']"
-            :key="sym"
+            v-for="sym in ['＜','＝','＞']" :key="sym"
             class="sym-btn"
-            :class="{ chosen: chosen === sym, correct: answered && sym === currentQ.answer, wrong: answered && chosen === sym && sym !== currentQ.answer }"
-            @click="pickSymbol(sym)"
+            :class="{
+              chosen: chosen===sym,
+              correct: answered && sym===cQ.answer,
+              wrong: answered && chosen===sym && sym!==cQ.answer
+            }"
+            @click="pickSym(sym)"
             :disabled="answered"
           >{{ sym }}</button>
         </div>
       </div>
 
-      <!-- 答题后反馈 -->
-      <transition name="pop">
-      <div class="feedback-bar" v-if="answered" :class="lastCorrect ? 'fb-correct' : 'fb-wrong'">
-        <div class="fb-emoji">{{ lastCorrect ? feedbackEmoji : '🤔' }}</div>
-        <div class="fb-msg">{{ lastCorrect ? feedbackMsg : wrongMsg }}</div>
-        <button class="fb-next" @click="doNext">
-          {{ qIndex + 1 >= totalQ ? '🎉 看结果' : (lastCorrect ? '下一题 ▶' : '再试试 💪') }}
+      <!-- 答题反馈条 -->
+      <transition name="slide-up">
+      <div class="feedback" v-if="answered" :class="lastOK?'fb-ok':'fb-no'">
+        <div class="fb-emoji">{{ lastOK ? feedEmoji : '🤔' }}</div>
+        <div class="fb-text">{{ lastOK ? feedMsg : failMsg }}</div>
+        <button class="fb-btn" @click="doNext">
+          {{ isLastQ ? '🎉 看结果！' : lastOK ? '继续 ▶' : '再试试 💪' }}
         </button>
       </div>
       </transition>
     </div>
     </transition>
 
-    <!-- ══════════════════════════════════════ 关卡结算 ══════════════════════════════════════ -->
+    <!-- ━━━━━━━━━━━━━━━━━━━━━━━ 结算 ━━━━━━━━━━━━━━━━━━━━━━━ -->
     <transition name="pop">
-    <div class="result-overlay" v-if="screen === 'result'">
+    <div class="result-overlay" v-if="screen==='result'">
       <div class="result-card">
-        <div class="result-confetti">
-          <span v-for="n in 20" :key="n" class="confetti-piece" :style="getConfettiStyle(n)">
+        <div class="rc-confetti">
+          <span v-for="n in 24" :key="n" class="cf" :style="cfStyle(n)">
             {{ ['⭐','🎉','✨','🎊','💫'][n%5] }}
           </span>
         </div>
-        <div class="result-bear">{{ resultBear }}</div>
-        <h2 class="result-title">{{ resultTitle }}</h2>
-        <div class="result-stars">
-          <span
-            v-for="n in 3"
-            :key="n"
-            class="result-star"
-            :class="{ lit: n <= resultStars }"
-            :style="{ animationDelay: n * 0.3 + 's' }"
-          >⭐</span>
+        <div class="rc-bear">{{ resBear }}</div>
+        <div class="rc-title">{{ resTitle }}</div>
+        <div class="rc-stars">
+          <span v-for="n in 3" :key="n" class="res-star" :class="{lit:n<=resStars}" :style="{animationDelay:n*0.25+'s'}">⭐</span>
         </div>
-        <div class="result-stats">
-          <div class="rs-item"><span class="rs-label">答对</span><span class="rs-val green">{{ correctCount }}/{{ totalQ }}</span></div>
-          <div class="rs-item"><span class="rs-label">得分</span><span class="rs-val yellow">+{{ gameScore }}⭐</span></div>
-          <div class="rs-item"><span class="rs-label">正确率</span><span class="rs-val blue">{{ Math.round(correctCount/totalQ*100) }}%</span></div>
-        </div>
-        <!-- 新成就 -->
-        <div class="new-ach" v-if="newAchievements.length > 0">
-          <div class="na-title">🎊 新成就！</div>
-          <div class="na-badges">
-            <div class="na-badge" v-for="a in newAchievements" :key="a.id">{{ a.icon }} {{ a.name }}</div>
+        <div class="rc-stats">
+          <div class="rcs">
+            <div class="rcs-v green">{{ correctCnt }}/{{ totalQ }}</div>
+            <div class="rcs-l">答对</div>
+          </div>
+          <div class="rcs">
+            <div class="rcs-v yellow">+{{ gScore }}</div>
+            <div class="rcs-l">星星</div>
+          </div>
+          <div class="rcs">
+            <div class="rcs-v blue">{{ Math.round(correctCnt/totalQ*100) }}%</div>
+            <div class="rcs-l">正确率</div>
           </div>
         </div>
-        <div class="result-actions">
-          <button class="ra-btn primary" @click="playAgain">🔄 再玩一次</button>
-          <button class="ra-btn secondary" @click="returnHome">🏠 回主页</button>
+        <div class="new-ach" v-if="newAchs.length">
+          <div class="na-hd">🏅 获得新成就！</div>
+          <div class="na-row">
+            <span class="na-item" v-for="a in newAchs" :key="a.id">{{ a.icon }} {{ a.name }}</span>
+          </div>
+        </div>
+        <div class="rc-actions">
+          <button class="big-btn blue" @click="replayGame">🔄 再玩一次</button>
+          <button class="big-btn white" @click="goHome">🏠 回家</button>
         </div>
       </div>
     </div>
     </transition>
 
-    <!-- ══════════════════════════════════════ 成就 ══════════════════════════════════════ -->
-    <transition name="screen-fade">
-    <div v-if="screen === 'achievements'" class="achievements-screen">
-      <div class="page-header">
-        <button class="back-btn" @click="screen = 'main'">◀ 返回</button>
-        <h2>🏅 成就</h2>
-        <div class="ach-count">{{ unlockedCount }}/{{ allAchievements.length }}</div>
+    <!-- ━━━━━━━━━━━━━━━━━━━━━━━ 成就墙 ━━━━━━━━━━━━━━━━━━━━━━━ -->
+    <transition name="fade-up">
+    <div v-if="screen==='achievements'" class="ach-screen">
+      <div class="pg-header">
+        <button class="back-btn" @click="screen='main'">◀ 返回</button>
+        <h2>🏅 我的成就</h2>
+        <span>{{ achUnlocked }}/{{ ACHS.length }}</span>
       </div>
       <div class="ach-grid">
         <div
-          class="ach-card"
-          v-for="a in allAchievements"
-          :key="a.id"
-          :class="{ unlocked: isUnlocked(a.id), locked: !isUnlocked(a.id) }"
+          v-for="a in ACHS" :key="a.id"
+          class="ach-tile"
+          :class="{ got: isAchUnlocked(a.id) }"
         >
-          <div class="ach-icon-big">{{ isUnlocked(a.id) ? a.icon : '🔒' }}</div>
-          <div class="ach-name">{{ a.name }}</div>
-          <div class="ach-desc">{{ a.desc }}</div>
-          <div class="ach-unlocked-at" v-if="isUnlocked(a.id)">✅ 已获得</div>
+          <div class="at-icon">{{ isAchUnlocked(a.id) ? a.icon : '🔒' }}</div>
+          <div class="at-name">{{ a.name }}</div>
+          <div class="at-desc">{{ a.desc }}</div>
         </div>
       </div>
     </div>
     </transition>
 
-    <!-- ══════════════════════════════════════ 家长报告 ══════════════════════════════════════ -->
-    <transition name="screen-fade">
-    <div v-if="screen === 'parent'" class="parent-screen">
-      <div class="page-header">
-        <button class="back-btn" @click="screen = prevScreen || 'main'">◀ 返回</button>
-        <h2>👨‍👩‍👧 家长报告</h2>
+    <!-- ━━━━━━━━━━━━━━━━━━━━━━━ 家长报告 ━━━━━━━━━━━━━━━━━━━━━━━ -->
+    <transition name="fade-up">
+    <div v-if="screen==='parent'" class="parent-screen">
+      <div class="pg-header parent-head">
+        <button class="back-btn" @click="screen=prevScr||'main'">◀ 返回</button>
+        <h2>👨‍👩‍👧 学习报告</h2>
         <div></div>
       </div>
 
-      <!-- 选择哪个小朋友 -->
-      <div class="parent-profile-tabs">
-        <div
-          class="ppt"
-          v-for="p in profiles"
-          :key="p.id"
-          :class="{ active: parentViewId === p.id }"
-          @click="parentViewId = p.id"
-        >{{ p.avatar }} {{ p.name }}</div>
+      <!-- 切换小朋友 -->
+      <div class="pr-tabs">
+        <div v-for="p in profiles" :key="p.id"
+          class="pr-tab" :class="{active: parentId===p.id}"
+          @click="parentId=p.id">
+          {{ p.avatar }} {{ p.name }}
+        </div>
       </div>
 
-      <div class="parent-content" v-if="parentProfile">
-        <div class="pr-section">
-          <div class="pr-title">📈 总体数据</div>
-          <div class="pr-cards">
-            <div class="prc blue"><div class="prc-v">{{ parentProfile.totalScore }}</div><div class="prc-l">⭐ 星星</div></div>
-            <div class="prc green"><div class="prc-v">{{ parentProfile.totalAnswered || 0 }}</div><div class="prc-l">📝 答题数</div></div>
-            <div class="prc orange"><div class="prc-v">{{ parentAccuracy }}%</div><div class="prc-l">🎯 正确率</div></div>
-            <div class="prc purple"><div class="prc-v">{{ parentProfile.streakDays || 1 }}天</div><div class="prc-l">🔥 连续</div></div>
+      <div class="pr-body" v-if="prProfile">
+        <!-- 总览卡片 -->
+        <div class="pr-row">
+          <div class="pr-card c-blue">
+            <div class="prc-big">{{ prProfile.totalScore }}</div>
+            <div class="prc-label">⭐ 星星总数</div>
+          </div>
+          <div class="pr-card c-green">
+            <div class="prc-big">{{ prProfile.totalAnswered||0 }}</div>
+            <div class="prc-label">📝 已答题数</div>
+          </div>
+          <div class="pr-card c-orange">
+            <div class="prc-big">{{ prAccuracy }}%</div>
+            <div class="prc-label">🎯 综合正确率</div>
+          </div>
+          <div class="pr-card c-purple">
+            <div class="prc-big">{{ prProfile.streakDays||1 }}天</div>
+            <div class="prc-label">🔥 连续学习</div>
           </div>
         </div>
 
-        <div class="pr-section">
-          <div class="pr-title">📊 各模块掌握</div>
-          <div class="skill-bars">
-            <div class="sk-row" v-for="sk in parentSkills" :key="sk.name">
-              <div class="sk-label">{{ sk.icon }} {{ sk.name }}</div>
-              <div class="sk-bar-wrap">
-                <div class="sk-bar" :style="{ width: sk.pct + '%', background: sk.color }"></div>
+        <!-- 模块掌握 -->
+        <div class="pr-section" v-if="prSkills.length">
+          <div class="prs-title">📊 各模块掌握情况</div>
+          <div class="skill-list">
+            <div class="sk-item" v-for="sk in prSkills" :key="sk.key">
+              <div class="sk-name">{{ sk.icon }} {{ sk.name }}</div>
+              <div class="sk-bar-bg">
+                <div class="sk-bar-fill" :style="{width:sk.pct+'%',background:sk.color}"></div>
               </div>
               <div class="sk-pct">{{ sk.pct }}%</div>
             </div>
           </div>
         </div>
 
+        <!-- 冒险进度 -->
         <div class="pr-section">
-          <div class="pr-title">🗺️ 冒险进度</div>
-          <div class="adv-progress">
-            <div class="adp-row" v-for="area in parentProfile.areaProgress || islandAreas" :key="area.id || area.name">
-              <div class="adp-emoji">{{ area.emoji }}</div>
-              <div class="adp-name">{{ area.name }}</div>
-              <div class="adp-status">
+          <div class="prs-title">🗺️ 冒险进度</div>
+          <div class="adv-list">
+            <div class="adv-row" v-for="area in (prProfile.areaProgress||[])" :key="area.id">
+              <span class="adv-emoji">{{ area.emoji }}</span>
+              <span class="adv-name">{{ area.name }}</span>
+              <span class="adv-status">
                 <span v-if="area.completed" class="s-done">✅ 完成</span>
-                <span v-else-if="area.unlocked" class="s-active">🔓 进行中</span>
-                <span v-else class="s-locked">🔒</span>
-              </div>
-              <div class="adp-stars" v-if="area.unlocked">
-                <span v-for="n in 3" :key="n">{{ n <= area.stars ? '⭐' : '✦' }}</span>
-              </div>
+                <span v-else-if="area.unlocked" class="s-ing">🔓 进行中</span>
+                <span v-else class="s-lock">🔒</span>
+              </span>
+              <span class="adv-stars" v-if="area.unlocked">
+                <span v-for="n in 3" :key="n">{{ n<=area.stars ? '⭐' : '☆' }}</span>
+              </span>
             </div>
           </div>
         </div>
 
-        <div class="pr-section tips-section">
-          <div class="pr-title">💡 给家长的建议</div>
-          <div class="tip-list">
-            <div class="tip" v-for="(t,i) in parentTips" :key="i">{{ t }}</div>
+        <!-- 成就 -->
+        <div class="pr-section">
+          <div class="prs-title">🏅 成就解锁 {{ prProfile.unlockedAchievements?.length||0 }}/{{ ACHS.length }}</div>
+          <div class="pr-achs">
+            <span v-for="a in ACHS" :key="a.id" class="pr-ach-dot"
+              :class="{lit: prProfile.unlockedAchievements?.includes(a.id)}"
+              :title="a.name">{{ a.icon }}</span>
           </div>
+        </div>
+
+        <!-- 建议 -->
+        <div class="pr-section tip-sec">
+          <div class="prs-title">💡 家长建议</div>
+          <div class="tip-item" v-for="(t,i) in prTips" :key="i">{{ t }}</div>
         </div>
       </div>
     </div>
     </transition>
 
-    <!-- ══════════════════════════════════════ 设置弹窗 ══════════════════════════════════════ -->
-    <div class="modal-backdrop" v-if="showSettings" @click.self="showSettings = false">
+    <!-- ━━━━━━━━━━━━━━━━━━━━━━━ 设置 ━━━━━━━━━━━━━━━━━━━━━━━ -->
+    <div class="modal-bg" v-if="showSettings" @click.self="showSettings=false">
       <div class="settings-modal">
-        <div class="sm-header">⚙️ 设置</div>
-        <div class="sm-body">
+        <div class="sm-title">⚙️ 设置</div>
+        <div class="sm-list">
           <div class="sm-row">
-            <span>每日时长</span>
-            <select v-model="settings.dailyMinutes" class="sm-select">
-              <option :value="10">10分钟（3岁）</option>
-              <option :value="15">15分钟（4岁）</option>
-              <option :value="20">20分钟（5岁）</option>
-              <option :value="30">30分钟（6岁）</option>
+            <span class="sm-label">每日时长</span>
+            <select v-model.number="settings.dailyMinutes" class="sm-sel">
+              <option :value="10">10分钟</option>
+              <option :value="15">15分钟</option>
+              <option :value="20">20分钟</option>
+              <option :value="30">30分钟</option>
             </select>
           </div>
           <div class="sm-row">
-            <span>语音朗读</span>
-            <label class="toggle"><input type="checkbox" v-model="settings.voice"/><span class="slider"></span></label>
+            <span class="sm-label">🔊 语音朗读</span>
+            <label class="tog"><input type="checkbox" v-model="settings.voice"><span class="tslider"></span></label>
           </div>
           <div class="sm-row">
-            <span>护眼暖色</span>
-            <label class="toggle"><input type="checkbox" v-model="settings.eyeProtection"/><span class="slider"></span></label>
+            <span class="sm-label">🎵 音效</span>
+            <label class="tog"><input type="checkbox" v-model="settings.sound"><span class="tslider"></span></label>
           </div>
           <div class="sm-row">
-            <span>音效反馈</span>
-            <label class="toggle"><input type="checkbox" v-model="settings.soundEffect"/><span class="slider"></span></label>
+            <span class="sm-label">🌿 护眼暖色</span>
+            <label class="tog"><input type="checkbox" v-model="settings.eyeProtection"><span class="tslider"></span></label>
           </div>
         </div>
-        <button class="sm-save" @click="saveSettings">保存 ✓</button>
+        <button class="big-btn green" @click="saveSettings">保存 ✓</button>
       </div>
     </div>
 
-    <!-- 粒子爆炸 -->
-    <div class="burst-layer" v-if="showBurst">
-      <div
-        class="burst-star"
-        v-for="n in 16"
-        :key="n"
-        :style="getBurstStyle(n)"
-      >{{ ['⭐','✨','🎉','💫'][n%4] }}</div>
+    <!-- 星星爆炸特效 -->
+    <div class="burst" v-if="showBurst">
+      <span v-for="n in 18" :key="n" class="burst-p" :style="burstStyle(n)">
+        {{ ['⭐','✨','🌟','💫'][n%4] }}
+      </span>
     </div>
 
   </div>
@@ -525,723 +530,742 @@
 <script>
 import { reactive, ref, computed, watch, onMounted, onUnmounted } from 'vue'
 
-// ──────── 题目生成引擎 ────────
-const EMOJIS = {
-  fruits: ['🍎','🍊','🍋','🍇','🍓','🍒','🍑','🫐','🍉','🍌'],
-  animals: ['🐱','🐶','🐰','🐻','🐼','🐨','🦊','🐸','🐮','🦁'],
-  stars: ['⭐','🌟','💫','✨','🌙'],
-  flowers: ['🌸','🌺','🌻','🌼','🌷'],
-  cookies: ['🍪','🧁','🎂','🍩','🍰'],
-  toys: ['🎈','🎀','🎁','🎠','🎪'],
-  sea: ['🐟','🦀','🐚','🌊','🦋'],
-}
-
-function randEmoji(set = 'fruits') {
-  const arr = EMOJIS[set] || EMOJIS.fruits
-  return arr[Math.floor(Math.random() * arr.length)]
-}
-
-function randInt(min, max) {
-  return Math.floor(Math.random() * (max - min + 1)) + min
-}
-
+// ═══════════════ 工具函数 ═══════════════
+const ri = (a, b) => Math.floor(Math.random() * (b - a + 1)) + a
+const pick = arr => arr[ri(0, arr.length - 1)]
 function shuffle(arr) {
   const a = [...arr]
   for (let i = a.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
+    const j = ri(0, i);
     [a[i], a[j]] = [a[j], a[i]]
   }
   return a
 }
-
-function makeOptions(answer, min = 0, max = 20, count = 4) {
-  const opts = new Set([answer])
-  const deltas = shuffle([-3,-2,-1,1,2,3,4,-4])
-  for (const d of deltas) {
-    if (opts.size >= count) break
-    const v = answer + d
-    if (v >= min && v <= max && v !== answer) opts.add(v)
+function makeOpts(ans, min = 0, max = 20, n = 4) {
+  const s = new Set([ans])
+  const ds = shuffle([-3,-2,-1,1,2,3,-4,4])
+  for (const d of ds) {
+    if (s.size >= n) break
+    const v = ans + d
+    if (v >= min && v <= max) s.add(v)
   }
-  while (opts.size < count) {
-    const v = randInt(min, Math.min(max, answer + 5))
-    if (!opts.has(v)) opts.add(v)
+  while (s.size < n) {
+    const v = ri(Math.max(min, ans - 4), Math.min(max, ans + 4))
+    s.add(v)
   }
-  return shuffle([...opts])
+  return shuffle([...s])
 }
 
-// ──────── 题型生成函数 ────────
+// ═══════════════ 题目场景库（图文严格一致） ═══════════════
+// 每个场景：emoji、名称（单数）、名称复数用法、用于故事的动词
+const SCENES = [
+  { emoji: '🍎', name: '苹果', verb: '摘苹果', setting: '苹果园', icon: '🌳🍎' },
+  { emoji: '🐟', name: '小鱼', verb: '钓到', setting: '小河边', icon: '🏞️🐟' },
+  { emoji: '⭐', name: '星星', verb: '收集到', setting: '夜空下', icon: '🌙⭐' },
+  { emoji: '🌸', name: '花朵', verb: '摘花', setting: '花园里', icon: '🌿🌸' },
+  { emoji: '🍪', name: '饼干', verb: '烤了', setting: '厨房里', icon: '🏠🍪' },
+  { emoji: '🦋', name: '蝴蝶', verb: '看到', setting: '草地上', icon: '🌿🦋' },
+  { emoji: '🍓', name: '草莓', verb: '摘到', setting: '草莓地', icon: '🌱🍓' },
+  { emoji: '🐣', name: '小鸡', verb: '孵出了', setting: '鸡窝里', icon: '🏡🐣' },
+  { emoji: '🎈', name: '气球', verb: '拿到', setting: '集市上', icon: '🎪🎈' },
+  { emoji: '🐠', name: '热带鱼', verb: '发现了', setting: '海底', icon: '🌊🐠' },
+]
 
-// 数字认识（3岁）
-function genCountQ(max = 5) {
-  const emojiSet = shuffle(Object.keys(EMOJIS))[0]
-  const emoji = randEmoji(emojiSet)
-  const n = randInt(1, max)
-  const items = Array(n).fill(emoji)
-  const storyTexts = [
-    `海滩上有几个贝壳？`,
-    `树上有几个果子？`,
-    `花园里有几朵花？`,
-    `篮子里有几个苹果？`,
-    `小熊的朋友有几个？`,
-  ]
+function getScene() { return pick(SCENES) }
+
+// ═══════════════ 题目生成器（图文一致版） ═══════════════
+
+// 数数题（1-max）
+function mkCount(max = 5) {
+  const sc = getScene()
+  const n = ri(1, max)
+  const items = Array(n).fill(sc.emoji)
   return {
-    text: storyTexts[randInt(0, storyTexts.length - 1)],
-    displayText: `数一数，有几个 ${emoji}？`,
-    visual: 'count',
-    items,
-    answer: n,
-    type: 'choice',
-    options: makeOptions(n, 1, max + 2, 4),
+    story: `${sc.setting}里有${n}个${sc.name}，数一数有几个${sc.emoji}？`,
+    storyIcon: sc.icon,
+    question: `数一数，有几个 ${sc.emoji}？`,
+    vtype: 'count', items,
+    answer: n, type: 'choice',
+    options: makeOpts(n, 1, max + 2, 4),
+    speakText: `${sc.setting}里有${n}个${sc.name}，请数一数，有几个？`,
   }
 }
 
-// 加法
-function genAddQ(max = 10) {
-  const half = Math.floor(max / 2)
-  const a = randInt(0, max - 1)
-  const b = randInt(1, max - a)
-  if (a + b > max) return genAddQ(max)
-  const emojiA = randEmoji('fruits')
-  const emojiB = a === b ? randEmoji('animals') : randEmoji('fruits')
-  const stories = [
-    { story: `小熊有 ${a} 个苹果，妈妈又给了 ${b} 个。`, storyScene: '🏠🍎', a, b },
-    { story: `池塘里游来 ${a} 只鸭子，又游来 ${b} 只。`, storyScene: '🌊🦆', a, b },
-    { story: `花园里有 ${a} 朵花，又开了 ${b} 朵。`, storyScene: '🌻🌸', a, b },
-    { story: `碗里有 ${a} 颗糖，小兔又放了 ${b} 颗。`, storyScene: '🐰🍬', a, b },
+// 加法（a、b 最少为 1，避免空组）
+function mkAdd(max = 10) {
+  const sc = getScene()
+  const a = ri(1, Math.max(1, max - 1))
+  const b = ri(1, Math.max(1, max - a))
+  const total = a + b
+
+  const storyTemplates = [
+    `小熊在${sc.setting}里${sc.verb}了${a}个${sc.name}，又${sc.verb}了${b}个，一共有几个${sc.emoji}？`,
+    `妈妈有${a}个${sc.name}${sc.emoji}，爸爸又拿来了${b}个，放在一起有几个？`,
+    `篮子里有${a}个${sc.name}${sc.emoji}，小兔子又放进去${b}个，现在有几个？`,
   ]
-  const s = stories[randInt(0, stories.length - 1)]
+
   return {
-    text: `${a} ＋ ${b} ＝ ？`,
-    displayText: `${a} ＋ ${b} ＝ ？`,
-    story: s.story,
-    storyScene: s.storyScene,
-    visual: 'add',
-    itemsA: Array(a).fill(emojiA),
-    itemsB: Array(b).fill(emojiB),
-    answer: a + b,
+    story: pick(storyTemplates),
+    storyIcon: sc.icon,
+    question: `${a} ＋ ${b} ＝ ？`,
+    vtype: 'add',
+    itemsA: Array(a).fill(sc.emoji),
+    itemsB: Array(b).fill(sc.emoji),
     a, b,
-    type: 'choice',
-    options: makeOptions(a + b, 0, max + 2, 4),
+    answer: total, type: 'choice',
+    options: makeOpts(total, 1, max + 3, 4),
+    speakText: `${a}个${sc.name}加上${b}个${sc.name}，一共有几个？`,
   }
 }
 
-// 减法
-function genSubQ(max = 10) {
-  const total = randInt(2, max)
-  const b = randInt(1, total)
-  const answer = total - b
-  const emoji = randEmoji('fruits')
-  const stories = [
-    { story: `小熊有 ${total} 个苹果，吃掉了 ${b} 个，还剩几个？`, storyScene: '🐻🍎' },
-    { story: `树上有 ${total} 只小鸟，飞走了 ${b} 只，还剩几只？`, storyScene: '🌳🐦' },
-    { story: `盘子里有 ${total} 块饼干，小狗吃了 ${b} 块，还剩几块？`, storyScene: '🐶🍪' },
-    { story: `花瓶里有 ${total} 朵花，掉落了 ${b} 朵，还剩几朵？`, storyScene: '🌸💧' },
+// 减法（total 最少 3，保证 b 有多种可能，keep 至少 1）
+function mkSub(max = 10) {
+  const sc = getScene()
+  const total = ri(3, Math.max(3, max))
+  const b = ri(1, total - 1)
+  const keep = total - b
+
+  const storyTemplates = [
+    `${sc.setting}里有${total}个${sc.name}${sc.emoji}，小熊${sc.verb.includes('摘')?'摘走':'吃掉'}了${b}个，还剩几个？`,
+    `篮子里有${total}个${sc.name}${sc.emoji}，小鸟叼走了${b}个，还剩几个？`,
+    `树上有${total}个${sc.name}${sc.emoji}，风吹落了${b}个，还剩几个？`,
   ]
-  const s = stories[randInt(0, stories.length - 1)]
+
   return {
-    text: `${total} － ${b} ＝ ？`,
-    displayText: `${total} － ${b} ＝ ？`,
-    story: s.story,
-    storyScene: s.storyScene,
-    visual: 'sub',
-    allItems: Array(total).fill(emoji),
-    answer,
+    story: pick(storyTemplates),
+    storyIcon: sc.icon,
+    question: `${total} － ${b} ＝ ？`,
+    vtype: 'sub',
+    allItems: Array(total).fill(sc.emoji),
+    itemEmoji: sc.name,
+    keep,
     b,
-    type: 'choice',
-    options: makeOptions(answer, 0, max, 4),
+    answer: keep, type: 'choice',
+    options: makeOpts(keep, 1, max, 4),
+    speakText: `${total}个${sc.name}，去掉${b}个，还剩几个？`,
   }
 }
 
-// 混合（加减混合随机出）
-function genMixQ(max = 10) {
-  return Math.random() > 0.5 ? genAddQ(max) : genSubQ(max)
+// 混合
+function mkMix(max = 10) {
+  return Math.random() > 0.5 ? mkAdd(max) : mkSub(max)
 }
 
-// 乘法（直观"几个几"方式展示，用于5-6岁）
-function genMulQ(multipliers = [2, 3]) {
-  const a = multipliers[randInt(0, multipliers.length - 1)]
-  const b = randInt(1, 5)
-  const answer = a * b
-  const emoji = randEmoji(shuffle(Object.keys(EMOJIS))[0])
-  const groups = Array(b).fill(null).map(() => Array(a).fill(emoji))
-  const mulDescTemplates = [
-    `${b} 组，每组 ${a} 个，一共有几个？`,
-    `${b} 排，每排 ${a} 朵，共有几朵？`,
-    `${b} 筐，每筐 ${a} 个，总共多少？`,
+// 乘法（限制总 emoji 数量 ≤ 12，避免溢出屏幕）
+function mkMul(mults = [2, 3]) {
+  const sc = getScene()
+  const a = pick(mults)                           // 每组个数
+  const maxGroups = Math.min(4, Math.floor(12 / a))
+  const b = ri(2, Math.max(2, maxGroups))         // 组数，确保总数 ≤ 12
+  const ans = a * b
+  const groups = Array(b).fill(null).map(() => Array(a).fill(sc.emoji))
+
+  const storyTemplates = [
+    `小熊把${sc.name}${sc.emoji}分成${b}组，每组${a}个，一共有几个${sc.emoji}？`,
+    `${sc.setting}里有${b}排${sc.name}${sc.emoji}，每排${a}个，共有几个？`,
+    `桌上放了${b}盘${sc.name}${sc.emoji}，每盘${a}个，总共几个？`,
   ]
-  const stories = [
-    { story: `小熊把${emoji}分成 ${b} 组，每组 ${a} 个，一共有几个？`, storyScene: '🐻' + emoji },
-    { story: `花园里有 ${b} 排花，每排 ${a} 朵，共有几朵花？`, storyScene: '🌻' },
-    { story: `桌上有 ${b} 盘${emoji}，每盘 ${a} 个，共几个？`, storyScene: '🍽️' + emoji },
-  ]
-  const s = stories[randInt(0, stories.length - 1)]
+
   return {
-    text: `${b} 个 ${a} ＝ ？`,
-    displayText: `${b} × ${a} ＝ ？`,
-    story: s.story,
-    storyScene: s.storyScene,
-    visual: 'mul',
-    groups,
-    mulDesc: mulDescTemplates[randInt(0, mulDescTemplates.length - 1)],
-    answer,
-    type: 'choice',
-    options: makeOptions(answer, 1, 30, 4),
+    story: pick(storyTemplates),
+    storyIcon: sc.icon,
+    question: `${b} × ${a} ＝ ？`,
+    vtype: 'mul',
+    groups, a, b,
+    answer: ans, type: 'choice',
+    options: makeOpts(ans, 2, 25, 4),
+    speakText: `${b}组${sc.name}，每组${a}个，一共有几个？`,
   }
 }
 
-// 比大小（5-6岁）
-function genCompareQ(max = 10) {
-  const a = randInt(0, max)
-  let b = randInt(0, max)
-  while (b === a) b = randInt(0, max)
-  const answer = a < b ? '＜' : a > b ? '＞' : '＝'
+// 比大小
+function mkCmp(max = 10) {
+  const numA = ri(0, max)
+  let numB
+  do { numB = ri(0, max) } while (numB === numA)
+  const ans = numA < numB ? '＜' : numA > numB ? '＞' : '＝'
+  const sc = getScene()
+
   return {
-    text: `${a} ○ ${b}`,
-    displayText: `${a} ○ ${b}，填入正确的符号`,
-    visual: 'compare',
-    numA: a,
-    numB: b,
-    answer,
-    type: 'symbol',
+    story: `小熊有${numA}个${sc.name}${sc.emoji}，小兔有${numB}个，谁多谁少？`,
+    storyIcon: sc.icon,
+    question: `${numA} ○ ${numB}，填入正确符号`,
+    vtype: 'compare', numA, numB,
+    answer: ans, type: 'symbol',
+    speakText: `${numA}和${numB}，哪个数更大？在中间填上小于、等于或大于号。`,
   }
 }
 
-// ──────── 关卡配置 ────────
-const PRACTICE_CATEGORIES = [
+// ═══════════════ 关卡配置 ═══════════════
+const CATS = [
   {
-    title: '数数认知',
-    emoji: '🔢',
-    ageHint: '3-4岁',
+    title: '数数认知', emoji: '🔢', age: '3-4岁',
     levels: [
-      { key: 'count5', name: '数一数（1-5）', desc: '认识1到5个物品', icon: '🍎', gen: () => genCountQ(5), age: 3 },
-      { key: 'count10', name: '数一数（1-10）', desc: '认识1到10个物品', icon: '🔟', gen: () => genCountQ(10), age: 4 },
+      { key: 'cnt5',  name: '数一数（1-5）',  desc: '数出1到5个物品',    icon: '🍎', gen: () => mkCount(5)  },
+      { key: 'cnt10', name: '数一数（1-10）', desc: '数出1到10个物品',   icon: '🔟', gen: () => mkCount(10) },
     ]
   },
   {
-    title: '加法',
-    emoji: '➕',
-    ageHint: '4-5岁',
+    title: '加法', emoji: '➕', age: '4-5岁',
     levels: [
-      { key: 'add5', name: '5以内加法', desc: '小数目的加法', icon: '🍊', gen: () => genAddQ(5), age: 4 },
-      { key: 'add10', name: '10以内加法', desc: '10以内加法', icon: '🍇', gen: () => genAddQ(10), age: 5 },
+      { key: 'add5',  name: '5以内加法',  desc: '合并计数，5以内',  icon: '🍊', gen: () => mkAdd(5)  },
+      { key: 'add10', name: '10以内加法', desc: '合并计数，10以内', icon: '🍇', gen: () => mkAdd(10) },
     ]
   },
   {
-    title: '减法',
-    emoji: '➖',
-    ageHint: '4-5岁',
+    title: '减法', emoji: '➖', age: '4-5岁',
     levels: [
-      { key: 'sub5', name: '5以内减法', desc: '小数目的减法', icon: '🍓', gen: () => genSubQ(5), age: 4 },
-      { key: 'sub10', name: '10以内减法', desc: '10以内减法', icon: '🍒', gen: () => genSubQ(10), age: 5 },
+      { key: 'sub5',  name: '5以内减法',  desc: '划掉数物，5以内',  icon: '🍓', gen: () => mkSub(5)  },
+      { key: 'sub10', name: '10以内减法', desc: '划掉数物，10以内', icon: '🍒', gen: () => mkSub(10) },
     ]
   },
   {
-    title: '混合练习',
-    emoji: '🔀',
-    ageHint: '5岁',
+    title: '加减混合', emoji: '🔀', age: '5岁',
     levels: [
-      { key: 'mix5', name: '5以内混合', desc: '加减法混合', icon: '🌈', gen: () => genMixQ(5), age: 5 },
-      { key: 'mix10', name: '10以内混合', desc: '加减法混合', icon: '🌟', gen: () => genMixQ(10), age: 5 },
+      { key: 'mix5',  name: '混合练习（5内）',  desc: '综合加减法', icon: '🌈', gen: () => mkMix(5)  },
+      { key: 'mix10', name: '混合练习（10内）', desc: '综合加减法', icon: '🌟', gen: () => mkMix(10) },
     ]
   },
   {
-    title: '乘法入门',
-    emoji: '✖️',
-    ageHint: '5-6岁',
+    title: '乘法入门', emoji: '✖️', age: '5-6岁',
     levels: [
-      { key: 'mul23', name: '2和3的乘法', desc: '直观理解几个几', icon: '✖️', gen: () => genMulQ([2,3]), age: 5 },
-      { key: 'mul45', name: '4和5的乘法', desc: '分组计数乘法', icon: '🌠', gen: () => genMulQ([4,5]), age: 6 },
+      { key: 'mul23', name: '2和3的乘法', desc: '分组理解乘法', icon: '✖️', gen: () => mkMul([2,3]) },
+      { key: 'mul45', name: '4和5的乘法', desc: '分组计数进阶', icon: '🌠', gen: () => mkMul([4,5]) },
     ]
   },
   {
-    title: '比大小',
-    emoji: '⚖️',
-    ageHint: '5-6岁',
+    title: '比大小', emoji: '⚖️', age: '5-6岁',
     levels: [
-      { key: 'cmp5', name: '比大小（1-5）', desc: '填＜＝＞', icon: '🏆', gen: () => genCompareQ(5), age: 5 },
-      { key: 'cmp10', name: '比大小（1-10）', desc: '填＜＝＞', icon: '🎯', gen: () => genCompareQ(10), age: 6 },
+      { key: 'cmp5',  name: '比大小（1-5）',  desc: '填入＜＝＞', icon: '🏆', gen: () => mkCmp(5)  },
+      { key: 'cmp10', name: '比大小（1-10）', desc: '填入＜＝＞', icon: '🎯', gen: () => mkCmp(10) },
     ]
   },
 ]
 
-// ──────── 冒险模式区域配置 ────────
-const ISLAND_AREAS = [
+// ═══════════════ 冒险区域（全部使用深色背景，确保白字对比度）═══════════════
+const AREAS = [
   {
     id: 'orchard', name: '苹果园', emoji: '🍎',
-    bg: 'linear-gradient(160deg, #a8edea 0%, #fed6e3 100%)',
+    bg: 'linear-gradient(160deg,#1a5c2e,#2d8a50)',   // 深绿 → 翠绿
     unlocked: true, completed: false, stars: 0,
-    genQ: () => genMixQ(5),
-    stories: ['帮小熊采苹果！', '苹果树上有好多苹果！', '把苹果装进篮子里！'],
-    minAge: 3,
+    genQ: () => mkMix(5),
+    splash: '帮小熊采苹果，解决数学难题！🍎',
   },
   {
     id: 'beach', name: '阳光沙滩', emoji: '🏖️',
-    bg: 'linear-gradient(160deg, #f6d365 0%, #fda085 100%)',
+    bg: 'linear-gradient(160deg,#7c4a00,#c07820)',   // 深棕 → 琥珀
     unlocked: false, completed: false, stars: 0,
-    genQ: () => genMixQ(8),
-    stories: ['沙滩上找贝壳！', '帮小鸟计数！', '海浪来了！'],
-    minAge: 4,
+    genQ: () => mkMix(8),
+    splash: '在沙滩找贝壳，数学藏在浪花里！🌊',
   },
   {
-    id: 'park', name: '欢乐游乐园', emoji: '🎢',
-    bg: 'linear-gradient(160deg, #89f7fe 0%, #66a6ff 100%)',
+    id: 'park', name: '欢乐公园', emoji: '🎡',
+    bg: 'linear-gradient(160deg,#0d4f8c,#1a7abf)',   // 深蓝 → 天蓝
     unlocked: false, completed: false, stars: 0,
-    genQ: () => genMixQ(10),
-    stories: ['旋转木马来了！', '气球飞起来啦！', '排队玩滑梯！'],
-    minAge: 4,
+    genQ: () => mkMix(10),
+    splash: '游乐园大冒险，旋转木马等你！🎢',
   },
   {
     id: 'treehouse', name: '神奇树屋', emoji: '🌲',
-    bg: 'linear-gradient(160deg, #d4fc79 0%, #96e6a1 100%)',
+    bg: 'linear-gradient(160deg,#2d4a00,#4a7c10)',   // 墨绿 → 草绿
     unlocked: false, completed: false, stars: 0,
-    genQ: () => { return Math.random() > 0.3 ? genMixQ(10) : genMulQ([2,3]) },
-    stories: ['爬上大树！', '松鼠在藏果子！', '鸟儿在唱歌！'],
-    minAge: 5,
+    genQ: () => Math.random() > 0.35 ? mkMix(10) : mkMul([2,3]),
+    splash: '树屋里的松鼠藏了秘密！🌰',
   },
   {
-    id: 'cave', name: '魔法水晶洞', emoji: '🔮',
-    bg: 'linear-gradient(160deg, #c3cfe2 0%, #c3cfe2 100%)',
+    id: 'cave', name: '水晶洞窟', emoji: '🔮',
+    bg: 'linear-gradient(160deg,#1e0a4a,#4a1a7c)',   // 深紫 → 紫罗兰
     unlocked: false, completed: false, stars: 0,
-    genQ: () => { return Math.random() > 0.4 ? genMixQ(15) : genMulQ([2,3,4]) },
-    stories: ['发现魔法水晶！', '洞里藏着宝藏！', '萤火虫飞来啦！'],
-    minAge: 5,
+    genQ: () => Math.random() > 0.4 ? mkMix(15) : mkMul([2,3,4]),
+    splash: '水晶洞里发现宝藏！✨',
   },
   {
     id: 'volcano', name: '彩虹火山', emoji: '🌋',
-    bg: 'linear-gradient(160deg, #f093fb 0%, #f5576c 100%)',
+    bg: 'linear-gradient(160deg,#6b0a0a,#c0220e)',   // 深红 → 火红
     unlocked: false, completed: false, stars: 0,
-    genQ: () => { return Math.random() > 0.5 ? genMixQ(20) : genMulQ([2,3,4,5]) },
-    stories: ['彩虹从火山升起！', '神秘宝石在哪里？', '最后的挑战！'],
-    minAge: 6,
+    genQ: () => Math.random() > 0.5 ? mkMix(20) : mkMul([2,3,4,5]),
+    splash: '彩虹火山，终极大挑战！🌈',
   },
 ]
 
-// ──────── 成就配置 ────────
-const ACHIEVEMENTS = [
-  { id: 'first_answer', icon: '🌱', name: '第一步', desc: '完成第一道题' },
-  { id: 'first_perfect', icon: '💯', name: '完美！', desc: '一关全部答对' },
-  { id: 'score10', icon: '🌟', name: '小星星', desc: '累计10颗星星' },
-  { id: 'score50', icon: '⭐', name: '星星收集家', desc: '累计50颗星星' },
-  { id: 'score100', icon: '🌠', name: '星际旅行者', desc: '累计100颗星星' },
-  { id: 'streak3', icon: '🔥', name: '坚持小达人', desc: '连续3天学习' },
-  { id: 'streak7', icon: '🌈', name: '学习超人', desc: '连续7天学习' },
-  { id: 'unlock_beach', icon: '🏖️', name: '探险家', desc: '解锁沙滩' },
-  { id: 'unlock_all', icon: '🗺️', name: '岛主', desc: '解锁所有区域' },
-  { id: 'mul_first', icon: '✖️', name: '乘法初体验', desc: '完成乘法练习' },
-  { id: 'compare_first', icon: '⚖️', name: '大小高手', desc: '完成比大小练习' },
-  { id: 'answered100', icon: '📚', name: '小学霸', desc: '累计答题100道' },
-  { id: 'no_wrong', icon: '🏅', name: '零失误', desc: '一关没有错误' },
-  { id: 'speed', icon: '⚡', name: '小闪电', desc: '10题全对' },
+// ═══════════════ 成就 ═══════════════
+const ACHS = [
+  { id: 'first',     icon: '🌱', name: '初出茅庐', desc: '完成第一道题' },
+  { id: 'perfect',   icon: '💯', name: '满分宝贝', desc: '一关全部答对' },
+  { id: 'no_wrong',  icon: '🏅', name: '零失误',   desc: '一关没有出错' },
+  { id: 'score10',   icon: '🌟', name: '小星星',   desc: '累计10颗星星' },
+  { id: 'score50',   icon: '⭐', name: '星星达人', desc: '累计50颗星星' },
+  { id: 'score100',  icon: '🌠', name: '星际旅行', desc: '累计100颗星星' },
+  { id: 'streak3',   icon: '🔥', name: '连续3天',  desc: '坚持3天学习' },
+  { id: 'streak7',   icon: '🌈', name: '一周超人', desc: '坚持7天学习' },
+  { id: 'adv2',      icon: '🏖️', name: '探险家',  desc: '解锁沙滩区域' },
+  { id: 'adv_all',   icon: '🗺️', name: '岛的主人', desc: '解锁全部区域' },
+  { id: 'mul_try',   icon: '✖️', name: '乘法初探', desc: '尝试乘法练习' },
+  { id: 'ans100',    icon: '📚', name: '小学霸',   desc: '累计答题100道' },
 ]
 
-// ──────── 本地存储工具 ────────
-const STORAGE_KEY = 'bearMath_v3'
+// ═══════════════ 存储 ═══════════════
+const STORE_KEY = 'bearMath_v4'
+const AVATARS = ['🐻','🐼','🐱','🐶','🐰','🦊','🐸','🦁','🐮','🐧','🦄','🐯']
 
-function loadData() {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY)
-    return raw ? JSON.parse(raw) : null
-  } catch { return null }
+function loadStore() {
+  try { return JSON.parse(localStorage.getItem(STORE_KEY) || 'null') } catch { return null }
+}
+function saveStore(d) {
+  try { localStorage.setItem(STORE_KEY, JSON.stringify(d)) } catch {}
 }
 
-function saveData(data) {
-  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(data)) } catch {}
-}
-
-// ──────── 默认 profile ────────
-function makeDefaultProfile(id, name, avatar, age) {
+function defaultProfile(id, name, avatar, age) {
   return {
-    id,
-    name,
-    avatar,
-    age,
-    totalScore: 0,
-    streakDays: 1,
-    totalAnswered: 0,
-    totalCorrect: 0,
+    id, name, avatar, age,
+    totalScore: 0, streakDays: 1,
+    totalAnswered: 0, totalCorrect: 0,
     lastPlayDate: '',
     unlockedAchievements: [],
     levelStars: {},
     subjectStats: {},
-    areaProgress: JSON.parse(JSON.stringify(ISLAND_AREAS)).map(a => ({
+    areaProgress: AREAS.map(a => ({
       id: a.id, name: a.name, emoji: a.emoji,
-      unlocked: a.id === 'orchard', completed: false, stars: 0
+      unlocked: a.id === 'orchard', completed: false, stars: 0,
     })),
   }
 }
 
+// ═══════════════ 音效引擎（Web Audio API，无需外部资源） ═══════════════
+let audioCtx = null
+function getAudioCtx() {
+  if (!audioCtx) {
+    try { audioCtx = new (window.AudioContext || window.webkitAudioContext)() } catch {}
+  }
+  return audioCtx
+}
+
+function playTone(freq, duration, type = 'sine', volume = 0.3, delay = 0) {
+  const ctx = getAudioCtx()
+  if (!ctx) return
+  try {
+    const osc = ctx.createOscillator()
+    const gain = ctx.createGain()
+    osc.connect(gain)
+    gain.connect(ctx.destination)
+    osc.type = type
+    osc.frequency.setValueAtTime(freq, ctx.currentTime + delay)
+    gain.gain.setValueAtTime(volume, ctx.currentTime + delay)
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + delay + duration)
+    osc.start(ctx.currentTime + delay)
+    osc.stop(ctx.currentTime + delay + duration)
+  } catch {}
+}
+
+// 正确音效：上升欢快音
+function soundCorrect() {
+  playTone(523, 0.1, 'sine', 0.3, 0)
+  playTone(659, 0.1, 'sine', 0.3, 0.1)
+  playTone(784, 0.15, 'sine', 0.35, 0.2)
+  playTone(1047, 0.25, 'sine', 0.3, 0.35)
+}
+
+// 错误音效：低沉提示
+function soundWrong() {
+  playTone(200, 0.15, 'sawtooth', 0.2, 0)
+  playTone(150, 0.2, 'sawtooth', 0.15, 0.15)
+}
+
+// 点击音效：短促
+function soundClick() {
+  playTone(800, 0.05, 'sine', 0.15, 0)
+}
+
+// 胜利音效
+function soundWin() {
+  [523,659,784,1047,1319].forEach((f,i) => {
+    playTone(f, 0.12, 'sine', 0.25, i * 0.1)
+  })
+}
+
+// ═══════════════ 自然语音（口语化，非机械读公式） ═══════════════
+let voiceList = []
+let voiceReady = false
+function initVoices() {
+  voiceList = speechSynthesis.getVoices().filter(v => v.lang.startsWith('zh'))
+  voiceReady = voiceList.length > 0
+}
+if (typeof speechSynthesis !== 'undefined') {
+  speechSynthesis.addEventListener('voiceschanged', initVoices)
+  initVoices()
+}
+
+function speakNatural(text, settings) {
+  if (!settings.voice) return
+  try {
+    speechSynthesis.cancel()
+    const u = new SpeechSynthesisUtterance(text)
+    // 找更自然的声音
+    const zhVoice = voiceList.find(v => v.name.includes('Xiaomei') || v.name.includes('Tingting') || v.name.includes('Female') || v.name.includes('女'))
+                 || voiceList[0]
+    if (zhVoice) u.voice = zhVoice
+    u.lang = 'zh-CN'
+    u.pitch = 1.35   // 略高，更适合儿童
+    u.rate = 0.82    // 慢一点，让小朋友听清楚
+    u.volume = 0.9
+    speechSynthesis.speak(u)
+  } catch {}
+}
+
+// ═══════════════ 主组件 ═══════════════
 export default {
   name: 'GameUI',
-  components: {
-    MainScreen,
-    AdventureScreen,
-    PracticeScreen,
-    GameScreen,
-    FeedbackModal,
-    CompletionModal,
-    SettingsModal
-  },
   setup() {
-    // ── 应用状态 ──
+    // ── 状态 ──
     const screen = ref('child-select')
-    const prevScreen = ref('')
+    const prevScr = ref('')
     const showSettings = ref(false)
     const showAddProfile = ref(false)
     const showBurst = ref(false)
-    const bearWalking = ref(false)
+    const bearWalk = ref(false)
 
     const settings = reactive({
       dailyMinutes: 15,
       voice: true,
+      sound: true,
       eyeProtection: false,
-      soundEffect: true,
     })
 
     // ── 用户数据 ──
-    const appData = reactive({ profiles: [], settings: {} })
-
-    const profiles = computed(() => appData.profiles)
-    const currentProfileId = ref(null)
-    const currentProfile = computed(() =>
-      appData.profiles.find(p => p.id === currentProfileId.value) || appData.profiles[0] || makeDefaultProfile('default','小朋友','🐻',4)
+    const store = reactive({ profiles: [], settings: {} })
+    const profiles = computed(() => store.profiles)
+    const curPId = ref(null)
+    const curP = computed(() =>
+      store.profiles.find(p => p.id === curPId.value) || store.profiles[0] || defaultProfile('__demo__','小朋友','🐻',4)
     )
 
-    const avatarOptions = ['🐻','🐼','🐱','🐶','🐰','🦊','🐸','🦁','🐮','🐧','🦄','🐯']
-
-    const newProfile = reactive({ name: '', avatar: '🐻', age: 4 })
+    const newP = reactive({ name: '', avatar: '🐻', age: 4 })
 
     function createProfile() {
-      if (!newProfile.name.trim()) return
-      const id = 'p_' + Date.now()
-      const p = makeDefaultProfile(id, newProfile.name.trim(), newProfile.avatar, newProfile.age)
-      appData.profiles.push(p)
-      saveAppData()
+      if (!newP.name.trim()) return
+      const id = 'p' + Date.now()
+      store.profiles.push(defaultProfile(id, newP.name.trim(), newP.avatar, newP.age))
+      persist()
       showAddProfile.value = false
-      newProfile.name = ''
-      newProfile.avatar = '🐻'
-      newProfile.age = 4
+      Object.assign(newP, { name: '', avatar: '🐻', age: 4 })
     }
 
-    function selectProfile(profile) {
-      currentProfileId.value = profile.id
-      updateStreak(profile)
+    function selectProfile(p) {
+      curPId.value = p.id
+      updateStreak(p)
       screen.value = 'main'
-      animateBear()
+      doAnimBear()
+      const greet = `你好，${p.name}！准备好了吗？出发！`
+      say(greet)
+      if (settings.sound) soundClick()
     }
 
-    function updateStreak(profile) {
+    function updateStreak(p) {
       const today = new Date().toDateString()
-      if (profile.lastPlayDate === today) return
-      const yesterday = new Date(Date.now() - 86400000).toDateString()
-      if (profile.lastPlayDate === yesterday) {
-        profile.streakDays = (profile.streakDays || 1) + 1
-      } else if (profile.lastPlayDate !== today) {
-        profile.streakDays = 1
+      if (p.lastPlayDate === today) return
+      const yest = new Date(Date.now() - 86400000).toDateString()
+      p.streakDays = p.lastPlayDate === yest ? (p.streakDays || 1) + 1 : 1
+      p.lastPlayDate = today
+      persist()
+    }
+
+    function doAnimBear() {
+      bearWalk.value = true
+      setTimeout(() => { bearWalk.value = false }, 2000)
+    }
+
+    function playWelcome() {
+      say('欢迎来到小熊数学岛！')
+      if (settings.sound) {
+        [523,659,784].forEach((f,i) => playTone(f, 0.1, 'sine', 0.2, i*0.12))
       }
-      profile.lastPlayDate = today
-      saveAppData()
     }
 
-    function animateBear() {
-      bearWalking.value = true
-      setTimeout(() => { bearWalking.value = false }, 2000)
+    function playBop() {
+      if (settings.sound) soundClick()
     }
-
-    // ── 岛屿地图（每个profile独立） ──
-    const islandAreas = computed(() => {
-      if (!currentProfile.value) return ISLAND_AREAS
-      return currentProfile.value.areaProgress || ISLAND_AREAS
-    })
 
     // ── 计时 ──
-    const remainingSeconds = ref(0)
-    let timerInterval = null
-
+    const remSecs = ref(900)
+    let timer = null
     function startTimer() {
-      remainingSeconds.value = (settings.dailyMinutes || 15) * 60
-      clearInterval(timerInterval)
-      timerInterval = setInterval(() => {
-        if (remainingSeconds.value > 0) remainingSeconds.value--
-      }, 1000)
+      remSecs.value = (settings.dailyMinutes || 15) * 60
+      clearInterval(timer)
+      timer = setInterval(() => { if (remSecs.value > 0) remSecs.value-- }, 1000)
     }
-
-    const remainingTimeStr = computed(() => {
-      const m = Math.floor(remainingSeconds.value / 60)
-      const s = remainingSeconds.value % 60
+    const remTimeStr = computed(() => {
+      const m = Math.floor(remSecs.value / 60)
+      const s = remSecs.value % 60
       return `${m}:${String(s).padStart(2,'0')}`
     })
 
-    // ── 游戏状态 ──
-    const currentGameMode = ref('practice') // 'adventure' | 'practice'
-    const currentAreaId = ref('')
-    const currentLevelKey = ref('')
-    const currentLevelName = ref('')
-    const currentAreaName = ref('')
-    const gameBg = ref('linear-gradient(160deg,#a8edea 0%,#fed6e3 100%)')
+    // ── 海岛 ──
+    const islandAreas = computed(() => curP.value?.areaProgress || AREAS.map(a => ({
+      id: a.id, name: a.name, emoji: a.emoji, unlocked: a.id === 'orchard', completed: false, stars: 0,
+    })))
 
-    const questions = ref([])
-    const qIndex = ref(0)
-    const totalQ = ref(10)
-    const gameScore = ref(0)
-    const correctCount = ref(0)
-    const wrongCount = ref(0)
+    function startArea(area) {
+      const cfg = AREAS.find(a => a.id === area.id)
+      if (!cfg) return
+      gameMode.value = 'adventure'
+      areaId.value = area.id
+      areaName.value = area.name
+      gameBg.value = cfg.bg
+      qs.value = Array(8).fill(null).map(() => cfg.genQ())
+      resetGame()
+      screen.value = 'game'
+      doAnimBear()
+      say(cfg.splash)
+      if (settings.sound) soundClick()
+    }
+
+    function onClickLocked(area) {
+      say('还没解锁哦，先完成前面的关卡吧！')
+      if (settings.sound) soundWrong()
+    }
+
+    // ── 练习 ──
+    function launchPractice(lv) {
+      gameMode.value = 'practice'
+      lvKey.value = lv.key
+      lvName.value = lv.name
+      gameBg.value = 'linear-gradient(160deg,#1a1a5c,#2d1b69)'  // 深蓝紫，与白字高对比
+      qs.value = Array(8).fill(null).map(() => lv.gen())
+      resetGame()
+      screen.value = 'game'
+      say(`开始${lv.name}！加油！`)
+      if (settings.sound) soundClick()
+    }
+
+    // ── 游戏状态 ──
+    const gameMode = ref('practice')
+    const areaId = ref('')
+    const areaName = ref('')
+    const lvKey = ref('')
+    const lvName = ref('')
+    const gameBg = ref('linear-gradient(160deg,#667eea,#764ba2)')
+    const gameTitle = computed(() => gameMode.value === 'adventure' ? `🗺️ ${areaName.value}` : `📚 ${lvName.value}`)
+
+    const qs = ref([])
+    const qIdx = ref(0)
+    const totalQ = computed(() => qs.value.length)
+    const gScore = ref(0)
+    const correctCnt = ref(0)
+    const wrongCnt = ref(0)
     const answered = ref(false)
     const chosen = ref(null)
-    const lastCorrect = ref(false)
+    const lastOK = ref(false)
     const shaking = ref(false)
     const qKey = ref(0)
+    const perQWrong = ref(0)   // 每题错误次数，用于减分
 
-    const currentQ = computed(() => questions.value[qIndex.value] || {})
-    const gameProgress = computed(() => Math.round((qIndex.value / totalQ.value) * 100))
+    const cQ = computed(() => qs.value[qIdx.value] || {})
+    const gProgress = computed(() => Math.round((qIdx.value / (totalQ.value || 1)) * 100))
+    const isLastQ = computed(() => qIdx.value + 1 >= totalQ.value)
 
-    // 完成结果
-    const resultStars = ref(0)
-    const resultTitle = ref('')
-    const resultBear = ref('🐻')
-    const newAchievements = ref([])
-
-    const feedbackEmoji = ref('🎉')
-    const feedbackMsg = ref('太棒了！')
-    const wrongMsg = computed(() => {
-      const ans = currentQ.value?.answer
-      if (currentQ.value?.type === 'symbol') return `正确答案是「${ans}」，再试试！`
-      return `正确答案是 ${ans}，没关系，再来！😊`
+    // 反馈
+    const feedEmoji = ref('🎉')
+    const feedMsg = ref('太棒了！')
+    const failMsg = computed(() => {
+      const q = cQ.value
+      if (q.type === 'symbol') return `应该填「${q.answer}」，再想想！`
+      return `正确答案是 ${q.answer}，别灰心，再来一次！💪`
     })
 
-    const CORRECT_MSGS = [
-      ['🎉','真厉害！答对了！'],
-      ['🌟','好聪明！加油！'],
-      ['✨','棒棒哒！继续！'],
-      ['🚀','超厉害！太棒了！'],
-      ['💯','完美！你最棒！'],
+    const FEED_OK = [
+      ['🎉','太棒了！答对啦！'],
+      ['🌟','超厉害！完全正确！'],
+      ['✨','哇，做得真好！'],
+      ['🚀','小天才！继续冲！'],
+      ['💯','完美！真聪明！'],
     ]
 
-    function genQuestions(genFn, count = 10) {
-      const qs = []
-      for (let i = 0; i < count; i++) qs.push(genFn())
-      return qs
-    }
-
-    function startPractice(level) {
-      currentGameMode.value = 'practice'
-      currentLevelKey.value = level.key
-      currentLevelName.value = level.name
-      gameBg.value = 'linear-gradient(160deg,#667eea 0%,#764ba2 100%)'
-      questions.value = genQuestions(level.gen, 10)
-      resetGameState()
-      screen.value = 'game'
-      speakText('开始练习！加油！')
-    }
-
-    function enterArea(area) {
-      const areaConfig = ISLAND_AREAS.find(a => a.id === area.id)
-      if (!areaConfig) return
-      currentGameMode.value = 'adventure'
-      currentAreaId.value = area.id
-      currentAreaName.value = area.name
-      gameBg.value = areaConfig.bg
-      questions.value = genQuestions(areaConfig.genQ, 8)
-      // 给冒险故事加上area的故事配置
-      questions.value = questions.value.map((q, i) => ({
-        ...q,
-        story: q.story || areaConfig.stories[i % areaConfig.stories.length],
-        storyScene: q.storyScene || areaConfig.emoji,
-      }))
-      resetGameState()
-      screen.value = 'game'
-      animateBear()
-      speakText(`进入${area.name}，开始冒险！`)
-    }
-
-    function resetGameState() {
-      qIndex.value = 0
-      totalQ.value = questions.value.length
-      gameScore.value = 0
-      correctCount.value = 0
-      wrongCount.value = 0
+    function resetGame() {
+      qIdx.value = 0
+      gScore.value = 0
+      correctCnt.value = 0
+      wrongCnt.value = 0
       answered.value = false
       chosen.value = null
-      lastCorrect.value = false
+      lastOK.value = false
       shaking.value = false
+      perQWrong.value = 0
       qKey.value++
+      // 进入第一题朗读
+      setTimeout(() => sayQuestion(), 500)
     }
 
-    function pickAnswer(opt, idx) {
+    function pick_(opt, idx) {
       if (answered.value) return
       chosen.value = idx
       answered.value = true
-      const correct = (typeof opt === 'object' ? opt.value : opt) === currentQ.value.answer
-      lastCorrect.value = correct
-
+      const correct = opt === cQ.value.answer
+      lastOK.value = correct
       if (correct) {
-        correctCount.value++
-        gameScore.value += wrongCount.value === 0 ? 15 : 10
-        const [em, msg] = CORRECT_MSGS[randInt(0, CORRECT_MSGS.length - 1)]
-        feedbackEmoji.value = em
-        feedbackMsg.value = msg
-        triggerBurst()
-        speakText(msg)
+        correctCnt.value++
+        const bonus = perQWrong.value === 0 ? 15 : 10
+        gScore.value += bonus
+        const [em, msg] = FEED_OK[ri(0, FEED_OK.length - 1)]
+        feedEmoji.value = em
+        feedMsg.value = msg
+        trigBurst()
+        if (settings.sound) soundCorrect()
+        say(msg)
       } else {
-        wrongCount.value++
+        perQWrong.value++
+        wrongCnt.value++
         shaking.value = true
         setTimeout(() => { shaking.value = false }, 600)
-        speakText('没关系，再想想！')
+        if (settings.sound) soundWrong()
+        say('没关系，再想想！')
       }
-
-      // 记录统计
-      recordStat(currentLevelKey.value || currentAreaId.value, correct)
+      recStat(lvKey.value || areaId.value, correct)
     }
 
-    function pickSymbol(sym) {
+    function pickSym_(sym) {
       if (answered.value) return
       chosen.value = sym
       answered.value = true
-      const correct = sym === currentQ.value.answer
-      lastCorrect.value = correct
-
+      const correct = sym === cQ.value.answer
+      lastOK.value = correct
       if (correct) {
-        correctCount.value++
-        gameScore.value += 10
-        const [em, msg] = CORRECT_MSGS[randInt(0, CORRECT_MSGS.length - 1)]
-        feedbackEmoji.value = em
-        feedbackMsg.value = msg
-        triggerBurst()
-        speakText(msg)
+        correctCnt.value++
+        gScore.value += 10
+        const [em, msg] = FEED_OK[ri(0, FEED_OK.length - 1)]
+        feedEmoji.value = em
+        feedMsg.value = msg
+        trigBurst()
+        if (settings.sound) soundCorrect()
+        say(msg)
       } else {
-        wrongCount.value++
+        perQWrong.value++
+        wrongCnt.value++
         shaking.value = true
         setTimeout(() => { shaking.value = false }, 600)
-        speakText('再试试！')
+        if (settings.sound) soundWrong()
+        say('再想想哦！')
       }
-      recordStat(currentLevelKey.value, correct)
+      recStat(lvKey.value, correct)
     }
 
     function doNext() {
-      if (!lastCorrect.value) {
-        // 答错：关闭反馈，重答
+      if (!lastOK.value) {
+        // 答错：重答同题
         answered.value = false
         chosen.value = null
         return
       }
       answered.value = false
       chosen.value = null
-      if (qIndex.value + 1 >= totalQ.value) {
+      perQWrong.value = 0
+      if (isLastQ.value) {
         finishGame()
       } else {
-        qIndex.value++
+        qIdx.value++
         qKey.value++
-        speakQuestion()
+        setTimeout(() => sayQuestion(), 400)
       }
     }
 
+    // ── 结算 ──
+    const resStars = ref(0)
+    const resTitle = ref('')
+    const resBear = ref('🐻')
+    const newAchs = ref([])
+
     function finishGame() {
-      const acc = correctCount.value / totalQ.value
-      resultStars.value = acc >= 1 ? 3 : acc >= 0.7 ? 2 : 1
-      resultTitle.value = acc >= 1 ? '完美通关！🎊' : acc >= 0.7 ? '非常棒！🌟' : '继续加油！💪'
-      resultBear.value = acc >= 1 ? '🥳' : acc >= 0.7 ? '😄' : '🐻'
+      const acc = correctCnt.value / totalQ.value
+      resStars.value = acc >= 1 ? 3 : acc >= 0.7 ? 2 : 1
+      resTitle.value = acc >= 1 ? '完美通关！🎊' : acc >= 0.7 ? '非常厉害！🌟' : '继续加油！💪'
+      resBear.value = acc >= 1 ? '🥳' : acc >= 0.7 ? '😄' : '🐻'
 
-      // 更新分数
-      const p = currentProfile.value
-      p.totalScore += gameScore.value
+      const p = curP.value
+      p.totalScore += gScore.value
       p.totalAnswered = (p.totalAnswered || 0) + totalQ.value
-      p.totalCorrect = (p.totalCorrect || 0) + correctCount.value
+      p.totalCorrect = (p.totalCorrect || 0) + correctCnt.value
 
-      // 更新冒险进度
-      if (currentGameMode.value === 'adventure') {
-        const area = p.areaProgress.find(a => a.id === currentAreaId.value)
-        if (area) {
-          area.completed = true
-          area.stars = Math.max(area.stars || 0, resultStars.value)
-          // 解锁下一关
-          const idx = p.areaProgress.findIndex(a => a.id === currentAreaId.value)
-          if (idx >= 0 && idx < p.areaProgress.length - 1) {
-            p.areaProgress[idx + 1].unlocked = true
+      // 冒险进度
+      if (gameMode.value === 'adventure') {
+        const ap = p.areaProgress.find(a => a.id === areaId.value)
+        if (ap) {
+          ap.completed = true
+          ap.stars = Math.max(ap.stars || 0, resStars.value)
+          const idx2 = p.areaProgress.findIndex(a => a.id === areaId.value)
+          if (idx2 >= 0 && idx2 < p.areaProgress.length - 1) {
+            p.areaProgress[idx2 + 1].unlocked = true
           }
         }
       }
 
-      // 更新练习星级
-      if (currentGameMode.value === 'practice' && currentLevelKey.value) {
+      // 练习星级
+      if (gameMode.value === 'practice' && lvKey.value) {
         if (!p.levelStars) p.levelStars = {}
-        p.levelStars[currentLevelKey.value] = Math.max(p.levelStars[currentLevelKey.value] || 0, resultStars.value)
+        p.levelStars[lvKey.value] = Math.max(p.levelStars[lvKey.value] || 0, resStars.value)
       }
 
-      // 检查成就
-      newAchievements.value = checkAchievements(p)
-
-      saveAppData()
+      newAchs.value = checkAchs(p)
+      persist()
       screen.value = 'result'
-      speakText(resultTitle.value)
+      if (settings.sound) soundWin()
+      say(resTitle.value + (newAchs.value.length ? '还获得了新成就！' : ''))
     }
 
-    function playAgain() {
-      if (currentGameMode.value === 'adventure') {
-        const areaConfig = ISLAND_AREAS.find(a => a.id === currentAreaId.value)
-        if (areaConfig) {
-          questions.value = genQuestions(areaConfig.genQ, 8)
-          questions.value = questions.value.map((q, i) => ({
-            ...q,
-            story: q.story || areaConfig.stories[i % areaConfig.stories.length],
-          }))
-        }
+    function replayGame() {
+      if (gameMode.value === 'adventure') {
+        const cfg = AREAS.find(a => a.id === areaId.value)
+        if (cfg) qs.value = Array(8).fill(null).map(() => cfg.genQ())
       } else {
-        const level = PRACTICE_CATEGORIES.flatMap(c => c.levels).find(l => l.key === currentLevelKey.value)
-        if (level) questions.value = genQuestions(level.gen, 10)
+        const lv = CATS.flatMap(c => c.levels).find(l => l.key === lvKey.value)
+        if (lv) qs.value = Array(8).fill(null).map(() => lv.gen())
       }
-      resetGameState()
+      resetGame()
       screen.value = 'game'
     }
 
-    function returnHome() {
-      newAchievements.value = []
+    function goHome() {
+      newAchs.value = []
       screen.value = 'main'
-      animateBear()
+      doAnimBear()
     }
 
-    function confirmExit() {
-      screen.value = currentGameMode.value === 'practice' ? 'practice' : 'main'
+    function exitGame() {
+      screen.value = gameMode.value === 'practice' ? 'practice' : 'main'
     }
 
-    // ── 成就系统 ──
-    const allAchievements = ACHIEVEMENTS
-
-    function isUnlocked(id) {
-      return currentProfile.value?.unlockedAchievements?.includes(id)
+    // ── 成就 ──
+    function isAchUnlocked(id) {
+      return curP.value?.unlockedAchievements?.includes(id)
     }
+    const achUnlocked = computed(() => curP.value?.unlockedAchievements?.length || 0)
 
-    const unlockedCount = computed(() =>
-      currentProfile.value?.unlockedAchievements?.length || 0
-    )
-
-    function checkAchievements(p) {
+    function checkAchs(p) {
       if (!p.unlockedAchievements) p.unlockedAchievements = []
-      const newly = []
-      const tryUnlock = (id, cond) => {
+      const got = []
+      const tryGet = (id, cond) => {
         if (cond && !p.unlockedAchievements.includes(id)) {
           p.unlockedAchievements.push(id)
-          newly.push(ACHIEVEMENTS.find(a => a.id === id))
+          const a = ACHS.find(a => a.id === id)
+          if (a) got.push(a)
         }
       }
-      tryUnlock('first_answer', (p.totalAnswered || 0) >= 1)
-      tryUnlock('first_perfect', correctCount.value === totalQ.value)
-      tryUnlock('no_wrong', wrongCount.value === 0)
-      tryUnlock('score10', p.totalScore >= 10)
-      tryUnlock('score50', p.totalScore >= 50)
-      tryUnlock('score100', p.totalScore >= 100)
-      tryUnlock('streak3', p.streakDays >= 3)
-      tryUnlock('streak7', p.streakDays >= 7)
-      tryUnlock('answered100', p.totalAnswered >= 100)
-      tryUnlock('unlock_beach', p.areaProgress?.find(a => a.id === 'beach')?.unlocked)
-      tryUnlock('unlock_all', p.areaProgress?.every(a => a.unlocked))
-      tryUnlock('mul_first', currentLevelKey.value.includes('mul'))
-      tryUnlock('compare_first', currentLevelKey.value.includes('cmp'))
-      tryUnlock('speed', correctCount.value >= 10 && wrongCount.value === 0)
-      return newly.filter(Boolean)
+      tryGet('first', (p.totalAnswered || 0) >= 1)
+      tryGet('perfect', correctCnt.value === totalQ.value)
+      tryGet('no_wrong', wrongCnt.value === 0)
+      tryGet('score10', p.totalScore >= 10)
+      tryGet('score50', p.totalScore >= 50)
+      tryGet('score100', p.totalScore >= 100)
+      tryGet('streak3', p.streakDays >= 3)
+      tryGet('streak7', p.streakDays >= 7)
+      tryGet('adv2', p.areaProgress?.find(a => a.id === 'beach')?.unlocked)
+      tryGet('adv_all', p.areaProgress?.every(a => a.unlocked))
+      tryGet('mul_try', lvKey.value.startsWith('mul'))
+      tryGet('ans100', p.totalAnswered >= 100)
+      return got
     }
 
-    // ── 统计记录 ──
-    function recordStat(key, correct) {
-      const p = currentProfile.value
+    // ── 统计 ──
+    function recStat(key, correct) {
+      const p = curP.value
       if (!p.subjectStats) p.subjectStats = {}
       if (!p.subjectStats[key]) p.subjectStats[key] = { total: 0, correct: 0 }
       p.subjectStats[key].total++
@@ -1249,1020 +1273,920 @@ export default {
     }
 
     // ── 家长报告 ──
-    const parentViewId = ref(null)
-    const parentProfile = computed(() =>
-      appData.profiles.find(p => p.id === parentViewId.value) || appData.profiles[0]
+    const parentId = ref(null)
+    const prProfile = computed(() =>
+      store.profiles.find(p => p.id === parentId.value) || store.profiles[0]
     )
-
-    const parentAccuracy = computed(() => {
-      const p = parentProfile.value
-      if (!p || !p.totalAnswered) return 0
+    const prAccuracy = computed(() => {
+      const p = prProfile.value
+      if (!p?.totalAnswered) return 0
       return Math.round((p.totalCorrect || 0) / p.totalAnswered * 100)
     })
-
-    const parentSkills = computed(() => {
-      const p = parentProfile.value
+    const SKILL_MAP = {
+      cnt5:  { name: '数数1-5',   icon: '🔢', color: '#7ec8e3' },
+      cnt10: { name: '数数1-10',  icon: '🔟', color: '#a8e6cf' },
+      add5:  { name: '加法(5内)', icon: '➕', color: '#ffd3b6' },
+      add10: { name: '加法(10内)',icon: '➕', color: '#fdbd74' },
+      sub5:  { name: '减法(5内)', icon: '➖', color: '#ffaaa5' },
+      sub10: { name: '减法(10内)',icon: '➖', color: '#ff8b94' },
+      mix5:  { name: '混合(5内)', icon: '🔀', color: '#c3b1e1' },
+      mix10: { name: '混合(10内)',icon: '🔀', color: '#a29bfe' },
+      mul23: { name: '乘法2/3',   icon: '✖️', color: '#ffeaa7' },
+      mul45: { name: '乘法4/5',   icon: '✖️', color: '#fab1a0' },
+      cmp5:  { name: '比大小(5内)',icon: '⚖️', color: '#81ecec' },
+      cmp10: { name: '比大小(10内)',icon: '⚖️', color: '#55efc4' },
+    }
+    const prSkills = computed(() => {
+      const p = prProfile.value
       if (!p?.subjectStats) return []
-      const map = {
-        count5: { name: '数数1-5', icon: '🔢', color: '#7ec8e3' },
-        count10: { name: '数数1-10', icon: '🔟', color: '#a8e6cf' },
-        add5: { name: '加法5内', icon: '➕', color: '#ffd3b6' },
-        add10: { name: '加法10内', icon: '➕', color: '#fdbd74' },
-        sub5: { name: '减法5内', icon: '➖', color: '#ffaaa5' },
-        sub10: { name: '减法10内', icon: '➖', color: '#ff8b94' },
-        mix5: { name: '混合5内', icon: '🔀', color: '#c3b1e1' },
-        mix10: { name: '混合10内', icon: '🔀', color: '#a29bfe' },
-        mul23: { name: '乘法2/3', icon: '✖️', color: '#ffeaa7' },
-        mul45: { name: '乘法4/5', icon: '✖️', color: '#fab1a0' },
-        cmp5: { name: '比大小', icon: '⚖️', color: '#81ecec' },
-      }
-      return Object.entries(p.subjectStats).map(([key, stat]) => {
-        const info = map[key] || { name: key, icon: '📝', color: '#ccc' }
-        return {
-          ...info,
-          pct: stat.total ? Math.round((stat.correct / stat.total) * 100) : 0
-        }
-      }).filter(s => s.pct > 0)
+      return Object.entries(p.subjectStats)
+        .filter(([,s]) => s.total >= 3)
+        .map(([key, s]) => ({
+          key,
+          ...(SKILL_MAP[key] || { name: key, icon: '📝', color: '#ccc' }),
+          pct: Math.round(s.correct / s.total * 100),
+        }))
     })
-
-    const parentTips = computed(() => {
-      const p = parentProfile.value
+    const prTips = computed(() => {
+      const p = prProfile.value
       if (!p) return []
       const tips = []
-      const acc = parentAccuracy.value
+      const acc = prAccuracy.value
       if (!p.totalAnswered) {
-        tips.push('🌱 宝贝还没开始答题哦，从冒险模式开始吧！')
+        tips.push('🌱 宝贝还没开始答题，先从冒险模式的"苹果园"开始吧！')
         return tips
       }
-      if (acc >= 90) tips.push(`🌟 ${p.name}的正确率高达${acc}%，表现出色！可以尝试更难的题目了。`)
-      else if (acc >= 70) tips.push(`👍 ${p.name}正确率${acc}%，稳步进步中！`)
-      else tips.push(`💪 正确率${acc}%，建议从5以内加减法开始，打好基础。`)
-      if (p.streakDays >= 3) tips.push(`🔥 已连续学习${p.streakDays}天，坚持得非常好！值得表扬！`)
-      if (!p.areaProgress?.find(a => a.id === 'beach')?.unlocked) tips.push('🗺️ 试试完成苹果园区域，解锁沙滩冒险！')
-      const subStats = p.subjectStats || {}
-      const weakKeys = Object.entries(subStats).filter(([, s]) => s.total >= 5 && s.correct/s.total < 0.6)
-      if (weakKeys.length > 0) tips.push(`📖 建议多练练这些模块：${weakKeys.map(([k])=>k).join('、')}。`)
-      tips.push('⏰ 建议每天学习时间不超过20分钟，避免疲劳。')
+      if (acc >= 90) tips.push(`🌟 ${p.name}的正确率高达${acc}%，可以尝试更难的模块了！`)
+      else if (acc >= 70) tips.push(`👍 ${p.name}正确率${acc}%，整体表现不错！`)
+      else tips.push(`💪 正确率${acc}%，建议从5以内加减法打牢基础，每天15分钟。`)
+      if (p.streakDays >= 3) tips.push(`🔥 已连续学习${p.streakDays}天，坚持得很棒，继续保持！`)
+      else tips.push('📅 建议每天固定时间学习，培养习惯，效果更好。')
+      const weak = prSkills.value.filter(s => s.pct < 60 && s.pct > 0)
+      if (weak.length) tips.push(`📖 重点加强：${weak.map(s => s.name).join('、')}。建议多练习几次。`)
+      if (!p.areaProgress?.find(a => a.id === 'beach')?.unlocked) {
+        tips.push('🗺️ 完成苹果园区域，就能解锁更多冒险场景！')
+      }
+      tips.push('⏰ 3-6岁儿童注意力有限，建议每次学习不超过20分钟，多鼓励，少批评。')
       return tips
     })
 
-    // ── 语音 ──
-    function speakText(text) {
-      if (!settings.voice) return
-      try {
-        const u = new SpeechSynthesisUtterance(text)
-        u.lang = 'zh-CN'; u.pitch = 1.4; u.rate = 0.85
-        speechSynthesis.cancel()
-        speechSynthesis.speak(u)
-      } catch {}
+    function openParent() {
+      prevScr.value = screen.value
+      if (!parentId.value && store.profiles.length > 0) parentId.value = store.profiles[0].id
+      screen.value = 'parent'
     }
 
-    function speakQuestion() {
-      if (!settings.voice) return
-      const q = currentQ.value
-      speakText(q.story || q.displayText || q.text || '')
+    // ── 语音（自然口语化） ──
+    function say(text) {
+      speakNatural(text, settings)
     }
 
-    // ── 粒子特效 ──
-    function triggerBurst() {
+    function sayQuestion() {
+      const q = cQ.value
+      if (q.speakText) say(q.speakText)
+      else if (q.story) say(q.story)
+    }
+
+    function speakStory() {
+      if (cQ.value.story) say(cQ.value.story)
+    }
+
+    // ── 特效 ──
+    function trigBurst() {
       showBurst.value = true
       setTimeout(() => { showBurst.value = false }, 1000)
     }
 
-    function getBurstStyle(n) {
-      const angle = (n / 16) * 360
-      const dist = 60 + Math.random() * 80
-      const x = 50 + Math.cos(angle * Math.PI / 180) * dist * 0.6
-      const y = 40 + Math.sin(angle * Math.PI / 180) * dist * 0.4
+    function burstStyle(n) {
+      const angle = (n / 18) * 360
       return {
-        left: x + '%',
-        top: y + '%',
+        left: (50 + Math.cos(angle * Math.PI / 180) * 38) + '%',
+        top: (42 + Math.sin(angle * Math.PI / 180) * 28) + '%',
         animationDelay: (n * 0.04) + 's',
-        fontSize: (1.2 + Math.random() * 0.8) + 'rem',
+        fontSize: (1.1 + Math.random() * 0.7) + 'rem',
       }
     }
 
-    function getConfettiStyle(n) {
+    function cfStyle(n) {
       return {
-        left: (5 + Math.random() * 90) + '%',
-        top: (5 + Math.random() * 80) + '%',
-        animationDelay: (n * 0.06) + 's',
-        fontSize: (1 + Math.random() * 0.8) + 'rem',
-        transform: `rotate(${Math.random() * 360}deg)`,
+        left: (5 + Math.random() * 88) + '%',
+        top: (5 + Math.random() * 75) + '%',
+        animationDelay: n * 0.05 + 's',
+        transform: `rotate(${Math.random()*360}deg)`,
+        fontSize: (0.9 + Math.random() * 0.7) + 'rem',
       }
     }
 
     // ── 设置 ──
     function saveSettings() {
-      appData.settings = { ...settings }
-      saveAppData()
+      Object.assign(store.settings, settings)
       startTimer()
       showSettings.value = false
+      persist()
     }
 
-    // ── 数据持久化（所有用户在同一个key下，按profile.id区分） ──
-    function saveAppData() {
-      saveData({ profiles: appData.profiles, settings: appData.settings })
+    // ── 存储 ──
+    function persist() {
+      saveStore({ profiles: store.profiles, settings: store.settings })
     }
 
-    function loadAppData() {
-      const d = loadData()
-      if (d) {
-        if (d.profiles) appData.profiles = d.profiles
-        if (d.settings) {
-          Object.assign(settings, d.settings)
-        }
-      }
-      // 兼容：如果没有profiles，创建默认
-      if (!appData.profiles.length) {
-        // 不自动创建，让用户自己创建
-      }
-    }
-
-    // ── 练习分类 ──
-    const practiceCategories = PRACTICE_CATEGORIES
-
-    // ── 初始化 ──
     onMounted(() => {
-      loadAppData()
+      const d = loadStore()
+      if (d) {
+        if (d.profiles?.length) store.profiles = d.profiles
+        if (d.settings) Object.assign(settings, d.settings)
+      }
       startTimer()
     })
 
-    onUnmounted(() => {
-      clearInterval(timerInterval)
-    })
+    onUnmounted(() => { clearInterval(timer) })
 
-    // 进入家长报告时设置默认查看的profile
-    watch(screen, (val) => {
-      if (val === 'parent') {
-        prevScreen.value = 'main'
-        if (!parentViewId.value && appData.profiles.length > 0) {
-          parentViewId.value = appData.profiles[0].id
-        }
-      }
+    // 切换家长报告时设置默认查看
+    watch(parentId, (v) => {
+      if (!v && store.profiles.length) parentId.value = store.profiles[0].id
     })
 
     return {
-      screen, prevScreen, showSettings, showAddProfile, showBurst, bearWalking,
-      settings, profiles, currentProfile, currentProfileId,
-      avatarOptions, newProfile,
-      islandAreas, remainingSeconds, remainingTimeStr,
-      currentGameMode, currentAreaName, currentLevelName, gameBg,
-      questions, qIndex, totalQ, gameScore, correctCount, wrongCount,
-      answered, chosen, lastCorrect, shaking, qKey,
-      currentQ, gameProgress,
-      resultStars, resultTitle, resultBear, newAchievements,
-      feedbackEmoji, feedbackMsg, wrongMsg,
-      allAchievements, unlockedCount,
-      parentViewId, parentProfile, parentAccuracy, parentSkills, parentTips,
-      practiceCategories,
+      screen, prevScr, showSettings, showAddProfile, showBurst, bearWalk,
+      settings, profiles, curP, curPId, newP, AVATARS,
+      islandAreas, remSecs, remTimeStr,
+      gameMode, gameBg, gameTitle,
+      qs, qIdx, totalQ, gScore, correctCnt, wrongCnt,
+      answered, chosen, lastOK, shaking, qKey,
+      cQ, gProgress, isLastQ,
+      resStars, resTitle, resBear, newAchs,
+      feedEmoji, feedMsg, failMsg,
+      ACHS, achUnlocked,
+      parentId, prProfile, prAccuracy, prSkills, prTips,
+      CATS,
 
-      selectProfile, createProfile,
-      startPractice, enterArea, pickAnswer, pickSymbol, doNext,
-      finishGame, playAgain, returnHome, confirmExit,
-      isUnlocked, speakQuestion,
-      getBurstStyle, getConfettiStyle, saveSettings,
+      selectProfile, createProfile, playWelcome, playBop,
+      startArea, onClickLocked, launchPractice,
+      pick: pick_, pickSym: pickSym_, doNext,
+      replayGame, goHome, exitGame,
+      isAchUnlocked, speakStory,
+      openParent,
+      burstStyle, cfStyle, saveSettings,
     }
   }
 }
 </script>
 
 <style scoped>
-/* ════════ 全局基础 ════════ */
+/* ═══ 全局基础 ═══ */
+*{box-sizing:border-box}
 .app-root {
-  min-height: 100vh;
+  min-height: 100svh;
   width: 100%;
-  font-family: 'PingFang SC', 'Noto Sans SC', 'Microsoft YaHei', sans-serif;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  font-family: 'PingFang SC','Noto Sans SC','Microsoft YaHei',sans-serif;
+  background: linear-gradient(135deg,#0093E9,#80D0C7);
   color: white;
   overflow-x: hidden;
-  position: relative;
+  touch-action: manipulation;
 }
+.app-root.warm-mode { filter: sepia(18%) brightness(0.97) }
 
-.app-root.warm-mode {
-  filter: sepia(20%) brightness(0.95);
+/* ═══ 动画基础 ═══ */
+.fade-up-enter-active,.fade-up-leave-active{transition:opacity .3s ease,transform .3s ease}
+.fade-up-enter-from{opacity:0;transform:translateY(16px)}
+.fade-up-leave-to{opacity:0;transform:translateY(-10px)}
+.pop-enter-active,.pop-leave-active{transition:all .35s cubic-bezier(.34,1.56,.64,1)}
+.pop-enter-from,.pop-leave-to{opacity:0;transform:scale(.6)}
+.q-swap-enter-active,.q-swap-leave-active{transition:all .3s ease}
+.q-swap-enter-from{opacity:0;transform:translateX(50px) scale(.95)}
+.q-swap-leave-to{opacity:0;transform:translateX(-40px) scale(.95)}
+.slide-up-enter-active,.slide-up-leave-active{transition:all .3s cubic-bezier(.34,1.56,.64,1)}
+.slide-up-enter-from,.slide-up-leave-to{opacity:0;transform:translateY(30px)}
+
+/* ═══ 公用组件 ═══ */
+.big-btn {
+  display: block; width: 100%; padding: 16px;
+  border: none; border-radius: 26px;
+  font-size: 1.1rem; font-weight: 900;
+  cursor: pointer; transition: transform .2s,box-shadow .2s;
+  letter-spacing: 1px;
 }
-
-/* ════════ 过渡 ════════ */
-.screen-fade-enter-active, .screen-fade-leave-active { transition: opacity 0.3s ease, transform 0.3s ease; }
-.screen-fade-enter-from { opacity: 0; transform: translateY(20px); }
-.screen-fade-leave-to { opacity: 0; transform: translateY(-10px); }
-
-.pop-enter-active, .pop-leave-active { transition: all 0.3s cubic-bezier(0.34,1.56,0.64,1); }
-.pop-enter-from, .pop-leave-to { opacity: 0; transform: scale(0.7); }
-
-.q-slide-enter-active, .q-slide-leave-active { transition: all 0.35s ease; }
-.q-slide-enter-from { opacity: 0; transform: translateX(40px) scale(0.95); }
-.q-slide-leave-to { opacity: 0; transform: translateX(-30px) scale(0.95); }
-
-/* ════════ 儿童选择界面 ════════ */
-.child-select-screen {
-  min-height: 100vh;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 20px;
-  position: relative;
-  background: linear-gradient(160deg, #0093E9 0%, #80D0C7 100%);
-  overflow: hidden;
-}
-
-/* 云朵装饰 */
-.clouds { position: absolute; top: 0; left: 0; right: 0; pointer-events: none; }
-.cloud { position: absolute; font-size: 2.5rem; animation: cloudFloat 8s ease-in-out infinite; opacity: 0.7; }
-.c1 { left: 5%; top: 8%; animation-delay: 0s; }
-.c2 { right: 8%; top: 12%; animation-delay: 3s; }
-.c3 { left: 40%; top: 5%; animation-delay: 1.5s; font-size: 2rem; }
-@keyframes cloudFloat { 0%,100%{transform:translateX(0)} 50%{transform:translateX(15px)} }
-
-.cs-hero { text-align: center; margin-bottom: 24px; }
-.hero-bear { font-size: 5rem; animation: bearBounce 2s ease-in-out infinite; display: block; margin-bottom: 10px; }
-@keyframes bearBounce { 0%,100%{transform:translateY(0) scale(1)} 50%{transform:translateY(-12px) scale(1.05)} }
-.hero-title { font-size: 2.6rem; font-weight: 900; text-shadow: 0 4px 12px rgba(0,0,0,0.2); margin: 0; letter-spacing: 2px; }
-.hero-sub { font-size: 1.1rem; opacity: 0.85; margin: 6px 0 0; }
-
-.cs-prompt { font-size: 1.05rem; opacity: 0.85; margin-bottom: 18px; }
-
-.profiles-row {
-  display: flex;
-  gap: 16px;
-  flex-wrap: wrap;
-  justify-content: center;
-  margin-bottom: 30px;
-}
-
-.profile-card {
-  background: rgba(255,255,255,0.25);
-  backdrop-filter: blur(12px);
-  border-radius: 20px;
-  padding: 18px 16px;
-  text-align: center;
-  cursor: pointer;
-  transition: all 0.3s cubic-bezier(0.34,1.56,0.64,1);
-  border: 2px solid rgba(255,255,255,0.4);
-  min-width: 110px;
-}
-.profile-card:hover { transform: translateY(-6px) scale(1.06); background: rgba(255,255,255,0.4); }
-.add-card { border-style: dashed; opacity: 0.75; }
-.add-card:hover { opacity: 1; }
-
-.profile-avatar { font-size: 3rem; display: block; margin-bottom: 8px; }
-.profile-name { font-size: 1rem; font-weight: bold; margin-bottom: 4px; }
-.profile-stars { font-size: 0.82rem; opacity: 0.85; }
-
-.parent-entry {
-  position: absolute;
-  bottom: 20px;
-  font-size: 0.9rem;
-  opacity: 0.7;
-  cursor: pointer;
-  padding: 8px 16px;
-  background: rgba(255,255,255,0.15);
-  border-radius: 20px;
-  transition: opacity 0.2s;
-}
-.parent-entry:hover { opacity: 1; }
-
-/* ════════ 新建Profile弹窗 ════════ */
-.modal-backdrop {
-  position: fixed;
-  inset: 0;
-  background: rgba(0,0,0,0.6);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 500;
-  backdrop-filter: blur(4px);
-}
-
-.add-profile-modal {
-  background: white;
-  color: #333;
-  border-radius: 28px;
-  padding: 28px 24px;
-  max-width: 380px;
-  width: 92%;
-  animation: popIn 0.4s cubic-bezier(0.34,1.56,0.64,1);
-}
-@keyframes popIn { from{transform:scale(0.5);opacity:0} to{transform:scale(1);opacity:1} }
-
-.add-profile-modal h2 { font-size: 1.3rem; margin: 0 0 16px; text-align: center; }
-
-.avatar-picker {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  justify-content: center;
-  margin-bottom: 16px;
-}
-.av-opt {
-  font-size: 2rem;
-  width: 48px;
-  height: 48px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  border: 2px solid transparent;
-  transition: all 0.2s;
-  background: #f5f5f5;
-}
-.av-opt:hover { background: #e8e8ff; transform: scale(1.1); }
-.av-opt.selected { border-color: #667eea; background: #e8e8ff; transform: scale(1.15); }
-
-.name-input {
-  width: 100%;
-  border: 2px solid #ddd;
-  border-radius: 12px;
-  padding: 10px 14px;
-  font-size: 1rem;
-  margin-bottom: 14px;
-  box-sizing: border-box;
-  text-align: center;
-  outline: none;
-  transition: border-color 0.2s;
-}
-.name-input:focus { border-color: #667eea; }
-
-.age-row {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  justify-content: center;
-  margin-bottom: 18px;
-  font-size: 0.95rem;
-}
-.age-btn {
-  padding: 7px 16px;
-  border-radius: 20px;
-  cursor: pointer;
-  background: #f0f0f0;
-  font-size: 0.9rem;
-  transition: all 0.2s;
-  border: 2px solid transparent;
-}
-.age-btn.active { background: #667eea; color: white; border-color: #667eea; }
-.age-btn:hover { transform: scale(1.05); }
-
-.confirm-btn {
-  width: 100%;
-  background: linear-gradient(45deg, #667eea, #764ba2);
-  color: white;
-  border: none;
-  border-radius: 22px;
-  padding: 14px;
-  font-size: 1.1rem;
-  font-weight: bold;
-  cursor: pointer;
-  transition: transform 0.2s;
-}
-.confirm-btn:hover:not(:disabled) { transform: scale(1.04); }
-.confirm-btn:disabled { opacity: 0.5; cursor: not-allowed; }
-
-/* ════════ 主页 ════════ */
-.main-screen {
-  min-height: 100vh;
-  display: flex;
-  flex-direction: column;
-  background: linear-gradient(180deg, #87CEEB 0%, #98E4FF 30%, #B8F0B0 60%, #7DD56F 100%);
-}
-
-/* 天空 */
-.sky-bg {
-  position: absolute;
-  top: 0; left: 0; right: 0;
-  height: 200px;
-  pointer-events: none;
-  overflow: hidden;
-}
-.sun { position: absolute; top: 15px; right: 20px; font-size: 2.8rem; animation: sunSpin 20s linear infinite; }
-@keyframes sunSpin { from{transform:rotate(0deg)} to{transform:rotate(360deg)} }
-.cloud.mc1 { position: absolute; left: 10%; top: 30px; font-size: 2rem; animation: cloudFloat 10s ease-in-out infinite; color: white; opacity: 0.9; }
-.cloud.mc2 { position: absolute; left: 55%; top: 20px; font-size: 1.6rem; animation: cloudFloat 7s ease-in-out infinite 2s; color: white; opacity: 0.8; }
-.birds { position: absolute; left: 35%; top: 45px; font-size: 0.9rem; animation: birdFly 12s linear infinite; opacity: 0.7; }
-@keyframes birdFly { from{transform:translateX(-40px) translateY(0)} 50%{transform:translateX(20px) translateY(-8px)} to{transform:translateX(-40px) translateY(0)} }
-
-/* 顶栏 */
-.main-topbar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 12px 16px;
-  position: relative;
-  z-index: 10;
-}
-
-.player-chip {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  background: rgba(255,255,255,0.35);
-  backdrop-filter: blur(8px);
-  border-radius: 20px;
-  padding: 7px 14px;
-  cursor: pointer;
-  transition: all 0.2s;
-  border: 1px solid rgba(255,255,255,0.5);
-}
-.player-chip:hover { background: rgba(255,255,255,0.5); }
-.chip-av { font-size: 1.4rem; }
-.chip-name { font-size: 0.9rem; font-weight: bold; color: #333; }
-
-.topbar-stats { display: flex; gap: 8px; }
-.ts-item {
-  background: rgba(255,255,255,0.35);
-  backdrop-filter: blur(8px);
-  border-radius: 14px;
-  padding: 5px 10px;
-  font-size: 0.82rem;
-  font-weight: bold;
-  color: #333;
-  border: 1px solid rgba(255,255,255,0.5);
-}
-.ts-item.time-chip { color: #333; }
-.ts-item.urgent { background: rgba(255,80,80,0.4); color: white; animation: urgentPulse 1s ease-in-out infinite; }
-@keyframes urgentPulse { 0%,100%{transform:scale(1)} 50%{transform:scale(1.06)} }
-
-.icon-btn {
-  background: rgba(255,255,255,0.35);
-  border: none;
-  border-radius: 50%;
-  width: 38px; height: 38px;
-  font-size: 1.2rem;
-  cursor: pointer;
-  transition: all 0.2s;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-.icon-btn:hover { background: rgba(255,255,255,0.55); transform: rotate(20deg); }
-
-/* 海岛全景 */
-.island-panorama {
-  flex: 1;
-  position: relative;
-  overflow: hidden;
-}
-
-.island-scene {
-  width: 100%;
-  min-height: 340px;
-  position: relative;
-  padding-bottom: 10px;
-}
-
-/* 区域泡泡 */
-.scene-spot {
-  position: absolute;
-  cursor: pointer;
-  transition: transform 0.3s cubic-bezier(0.34,1.56,0.64,1);
-}
-.scene-spot:hover:not(.spot-locked) { transform: scale(1.08); }
-.scene-spot.spot-locked { opacity: 0.55; cursor: not-allowed; }
-
-/* 各区域位置 */
-.spot-orchard { left: 8%; top: 20px; }
-.spot-beach { left: 35%; top: 10px; }
-.spot-park { right: 8%; top: 25px; }
-.spot-treehouse { left: 18%; top: 140px; }
-.spot-cave { right: 20%; top: 145px; }
-.spot-volcano { left: 42%; top: 155px; }
-
-.spot-bubble {
-  background: rgba(255,255,255,0.98);
-  backdrop-filter: blur(8px);
-  border-radius: 20px;
-  padding: 12px 14px;
-  text-align: center;
-  min-width: 90px;
-  box-shadow: 0 8px 24px rgba(15,23,42,0.2);
-  border: 2px solid rgba(148,163,184,0.55);
-  position: relative;
-  color: #1f2937;
-}
-.spot-bubble::after {
-  content: '';
-  position: absolute;
-  bottom: -10px;
-  left: 50%;
-  transform: translateX(-50%);
-  border: 8px solid transparent;
-  border-top: 10px solid rgba(255,255,255,0.9);
-}
-
-.spot-done .spot-bubble { border-color: #4ade80; background: rgba(220,255,220,0.95); }
-
-.spot-emoji { font-size: 2rem; display: block; margin-bottom: 4px; }
-.spot-name { font-size: 0.78rem; font-weight: 700; color: #1f2937; margin-bottom: 4px; }
-.spot-stars { font-size: 0.75rem; margin-bottom: 6px; color: #334155; }
-.spot-lock { font-size: 1.1rem; }
-.spot-cta {
-  background: linear-gradient(45deg,#db2777,#7c3aed);
-  color: #fff;
-  border-radius: 10px;
-  padding: 4px 10px;
-  font-size: 0.75rem;
-  font-weight: bold;
-  cursor: pointer;
-  text-shadow: 0 1px 2px rgba(0,0,0,0.25);
-}
-
-.spot-locked .spot-bubble {
-  background: rgba(241,245,249,0.98);
-  border-color: rgba(148,163,184,0.7);
-}
-
-/* 装饰 */
-.bear-character {
-  position: absolute;
-  bottom: 60px; left: 45%;
-  font-size: 2.5rem;
-  transition: all 1s ease;
-  filter: drop-shadow(0 4px 8px rgba(0,0,0,0.2));
-}
-.bear-character.bear-walk { animation: bearWalk 1.5s ease-in-out; }
-@keyframes bearWalk { 0%{transform:translateX(0)} 25%{transform:translateX(-20px) rotate(-5deg)} 75%{transform:translateX(20px) rotate(5deg)} 100%{transform:translateX(0)} }
-
-.deco-tree { position: absolute; font-size: 2.5rem; pointer-events: none; }
-.t1 { left: 2%; bottom: 60px; font-size: 2rem; }
-.t2 { right: 3%; bottom: 50px; }
-.t3 { left: 52%; bottom: 40px; font-size: 2.2rem; }
-
-.deco-flower { position: absolute; pointer-events: none; font-size: 1.4rem; animation: flowerSway 4s ease-in-out infinite; }
-.f1 { left: 25%; bottom: 50px; }
-.f2 { right: 32%; bottom: 58px; animation-delay: 2s; }
-@keyframes flowerSway { 0%,100%{transform:rotate(-5deg)} 50%{transform:rotate(5deg)} }
-
-.deco-ocean {
-  position: absolute;
-  bottom: 0; left: 0; right: 0;
-  font-size: 1.8rem;
-  text-align: center;
-  letter-spacing: 8px;
-  animation: oceanWave 3s ease-in-out infinite;
-  opacity: 0.8;
-}
-@keyframes oceanWave { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-5px)} }
-
-/* 底部导航 */
-.bottom-nav {
-  display: flex;
-  background: rgba(255,255,255,0.92);
-  backdrop-filter: blur(12px);
-  border-top: 1px solid rgba(255,255,255,0.5);
-  padding: 8px 0 max(8px, env(safe-area-inset-bottom));
-}
-.nav-item {
-  flex: 1;
-  text-align: center;
-  cursor: pointer;
-  padding: 6px;
-  transition: all 0.2s;
-  border-radius: 10px;
-  margin: 0 4px;
-}
-.nav-item:hover { background: rgba(102,126,234,0.12); }
-.nav-item.active .nav-icon { filter: none; }
-.nav-item.active .nav-label { color: #667eea; font-weight: bold; }
-.nav-icon { font-size: 1.5rem; }
-.nav-label { font-size: 0.7rem; color: #4b5563; margin-top: 2px; }
-
-/* ════════ 练习模式 ════════ */
-.practice-screen { min-height: 100vh; display: flex; flex-direction: column; }
-.page-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 14px 18px;
-  background: rgba(0,0,0,0.15);
-  backdrop-filter: blur(10px);
-}
-.page-header h2 { font-size: 1.2rem; margin: 0; }
+.big-btn:hover { transform: scale(1.04); box-shadow: 0 6px 20px rgba(0,0,0,.2) }
+.big-btn:active { transform: scale(.96) }
+.big-btn.green { background: linear-gradient(45deg,#4CAF50,#8BC34A); color: white }
+.big-btn.blue  { background: linear-gradient(45deg,#667eea,#764ba2); color: white }
+.big-btn.white { background: rgba(255,255,255,.85); color: #444 }
+.big-btn:disabled { opacity: .45; cursor: not-allowed; transform: none }
 
 .back-btn {
-  background: rgba(255,255,255,0.2);
-  border: none;
+  background: rgba(255,255,255,.22); border: none; color: white;
+  padding: 9px 18px; border-radius: 20px; cursor: pointer;
+  font-size: .9rem; transition: background .2s; flex-shrink: 0;
+}
+.back-btn:hover { background: rgba(255,255,255,.38) }
+.back-btn.ghost {
+  background: rgba(0,0,0,.35); border: 1px solid rgba(255,255,255,.45);
   color: white;
-  padding: 8px 16px;
-  border-radius: 20px;
-  cursor: pointer;
-  font-size: 0.9rem;
-  transition: all 0.2s;
 }
-.back-btn:hover { background: rgba(255,255,255,0.35); }
-.back-btn.ghost { background: transparent; border: 1px solid rgba(255,255,255,0.4); }
+.back-btn.ghost:hover { background: rgba(0,0,0,.5) }
 
-.header-score { font-size: 1rem; font-weight: bold; }
-.ach-count { font-size: 0.9rem; font-weight: bold; opacity: 0.85; }
-
-.practice-scroll { flex: 1; overflow-y: auto; padding: 14px 14px 80px; }
-
-.practice-category { margin-bottom: 20px; }
-.cat-header { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
-.cat-emoji { font-size: 1.3rem; }
-.cat-title { font-size: 1rem; font-weight: bold; }
-.cat-age { font-size: 0.75rem; background: rgba(255,255,255,0.2); border-radius: 10px; padding: 2px 8px; opacity: 0.8; }
-
-.cat-levels { display: flex; flex-direction: column; gap: 8px; }
-.level-card {
-  display: flex;
-  align-items: center;
-  background: rgba(255,255,255,0.15);
-  backdrop-filter: blur(8px);
-  border-radius: 16px;
-  padding: 14px 16px;
-  cursor: pointer;
-  transition: all 0.25s;
-  border: 1px solid rgba(255,255,255,0.25);
-  gap: 12px;
-}
-.level-card:hover { background: rgba(255,255,255,0.28); transform: translateX(4px); }
-.level-icon { font-size: 2rem; flex-shrink: 0; }
-.level-info { flex: 1; }
-.level-name { font-size: 1rem; font-weight: bold; margin-bottom: 3px; }
-.level-desc { font-size: 0.78rem; opacity: 0.75; }
-.level-stars { font-size: 0.9rem; flex-shrink: 0; }
-
-/* ════════ 游戏界面 ════════ */
-.game-screen {
-  min-height: 100vh;
-  display: flex;
-  flex-direction: column;
-  transition: background 0.5s ease;
-}
-
-.game-header {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 12px 16px;
-  background: rgba(0,0,0,0.18);
-  backdrop-filter: blur(10px);
-}
-
-.game-progress-wrap { flex: 1; }
-.gp-label { font-size: 0.82rem; opacity: 0.85; margin-bottom: 4px; }
-.gp-bar {
-  height: 16px;
-  background: rgba(255,255,255,0.25);
-  border-radius: 8px;
-  position: relative;
-  overflow: visible;
-}
-.gp-fill {
-  height: 100%;
-  background: linear-gradient(90deg, #FFD700, #FF6B6B);
-  border-radius: 8px;
-  transition: width 0.5s ease;
-}
-.gp-bear {
-  position: absolute;
-  top: -5px;
-  font-size: 1.4rem;
-  transition: left 0.5s ease;
-  filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));
-}
-.gp-count { font-size: 0.75rem; opacity: 0.8; margin-top: 3px; text-align: right; }
-.game-score-chip { background: rgba(255,215,0,0.3); border-radius: 16px; padding: 6px 12px; font-size: 1rem; font-weight: bold; border: 1px solid rgba(255,215,0,0.5); white-space: nowrap; }
-
-/* 题目区 */
-.question-zone { flex: 1; display: flex; align-items: flex-start; justify-content: center; padding: 14px 14px 0; }
-
-.question-card {
-  background: rgba(255,255,255,0.18);
-  backdrop-filter: blur(14px);
-  border-radius: 26px;
-  padding: 20px;
-  width: 100%;
-  max-width: 600px;
-  border: 1px solid rgba(255,255,255,0.35);
-  box-shadow: 0 8px 32px rgba(0,0,0,0.12);
-  position: relative;
-}
-.question-card.shake { animation: shake 0.55s ease; }
-@keyframes shake { 0%,100%{transform:translateX(0)} 20%{transform:translateX(-10px)} 40%{transform:translateX(10px)} 60%{transform:translateX(-6px)} 80%{transform:translateX(6px)} }
-
-/* 故事情境 */
-.story-context {
-  background: rgba(255,255,255,0.15);
-  border-radius: 14px;
-  padding: 10px 14px;
-  margin-bottom: 12px;
-}
-.story-scene { font-size: 1.6rem; margin-bottom: 4px; }
-.story-text { font-size: 0.95rem; line-height: 1.5; opacity: 0.95; }
-
-.q-text {
-  font-size: 1.8rem;
-  font-weight: 900;
-  text-align: center;
-  margin-bottom: 14px;
-  text-shadow: 0 2px 8px rgba(0,0,0,0.15);
-}
-
-/* 视觉辅助 */
-.q-visual { margin-bottom: 10px; }
-
-.count-visual .items-grid {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: 6px;
-  min-height: 40px;
-}
-.count-item {
-  font-size: 2rem;
-  animation: itemPop 0.4s cubic-bezier(0.34,1.56,0.64,1) both;
-  display: inline-block;
-}
-.count-item.sm { font-size: 1.4rem; }
-@keyframes itemPop { from{transform:scale(0);opacity:0} to{transform:scale(1);opacity:1} }
-
-.item-pop-enter-active { animation: itemPop 0.4s cubic-bezier(0.34,1.56,0.64,1) both; }
-
-/* 加法可视化 */
-.add-visual { display: flex; align-items: center; justify-content: center; gap: 8px; flex-wrap: wrap; }
-.add-group { display: flex; flex-wrap: wrap; gap: 4px; justify-content: center; max-width: 120px; background: rgba(255,255,255,0.15); border-radius: 12px; padding: 8px; }
-.plus-sign, .equals-sign { font-size: 1.6rem; font-weight: bold; }
-.q-mark { font-size: 2rem; font-weight: 900; background: rgba(255,215,0,0.3); border-radius: 50%; width: 50px; height: 50px; display: flex; align-items: center; justify-content: center; }
-
-/* 减法可视化 */
-.sub-visual { text-align: center; }
-.sub-group { display: flex; flex-wrap: wrap; justify-content: center; gap: 5px; margin-bottom: 8px; }
-.count-item.crossed { opacity: 0.25; position: relative; text-decoration: line-through; filter: grayscale(1); }
-.sub-hint { font-size: 0.88rem; opacity: 0.8; background: rgba(255,100,100,0.2); border-radius: 10px; padding: 4px 10px; display: inline-block; }
-
-/* 乘法可视化 */
-.mul-visual { display: flex; flex-direction: column; align-items: center; gap: 6px; }
-.mul-row { display: flex; align-items: center; gap: 6px; }
-.mul-group { display: flex; gap: 4px; background: rgba(255,255,255,0.15); border-radius: 10px; padding: 6px 10px; }
-.mul-sep { font-size: 1.2rem; opacity: 0.4; }
-.mul-desc { font-size: 0.88rem; opacity: 0.85; background: rgba(255,255,255,0.15); border-radius: 10px; padding: 4px 12px; margin-top: 4px; text-align: center; }
-
-/* 数字认识 */
-.number-visual { text-align: center; }
-.big-number { font-size: 6rem; font-weight: 900; text-shadow: 0 4px 20px rgba(0,0,0,0.2); line-height: 1; margin-bottom: 10px; }
-.number-items { display: flex; flex-wrap: wrap; justify-content: center; gap: 4px; }
-
-/* 比大小 */
-.compare-visual { display: flex; align-items: center; justify-content: center; gap: 20px; }
-.cmp-num { font-size: 3.5rem; font-weight: 900; background: rgba(255,255,255,0.2); border-radius: 16px; width: 70px; height: 70px; display: flex; align-items: center; justify-content: center; }
-.cmp-mid { font-size: 2rem; opacity: 0.5; }
-
-.voice-fab {
-  position: absolute;
-  bottom: 14px; right: 14px;
-  background: rgba(255,255,255,0.25);
-  border: none;
-  border-radius: 50%;
-  width: 38px; height: 38px;
-  font-size: 1.1rem;
-  cursor: pointer;
+.modal-bg {
+  position: fixed; inset: 0; background: rgba(0,0,0,.65);
   display: flex; align-items: center; justify-content: center;
-  transition: all 0.2s;
+  z-index: 600; backdrop-filter: blur(5px);
 }
-.voice-fab:hover { background: rgba(255,255,255,0.45); transform: scale(1.1); }
-
-/* 答案区 */
-.answer-zone { padding: 14px; }
-
-.choice-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; max-width: 600px; margin: 0 auto; }
-.choice-btn {
-  background: rgba(255,255,255,0.22);
-  border: 2px solid rgba(255,255,255,0.4);
-  border-radius: 18px;
-  padding: 18px 12px;
-  font-size: 1.8rem;
-  font-weight: bold;
-  color: white;
-  cursor: pointer;
-  transition: all 0.25s cubic-bezier(0.34,1.56,0.64,1);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 4px;
-}
-.choice-btn:hover:not(:disabled) { background: rgba(255,255,255,0.38); transform: scale(1.05); }
-.choice-btn.chosen { background: rgba(255,255,100,0.3); border-color: #FFD700; transform: scale(1.04); }
-.choice-btn.correct { background: rgba(80,200,80,0.6) !important; border-color: #4ade80 !important; animation: correctPop 0.5s ease; }
-.choice-btn.wrong { background: rgba(255,80,80,0.5) !important; border-color: #f87171 !important; }
-@keyframes correctPop { 0%{transform:scale(1)} 50%{transform:scale(1.12)} 100%{transform:scale(1.05)} }
-.choice-btn:disabled { cursor: default; }
-.choice-emoji { font-size: 1.2rem; }
-.choice-val { font-size: 2rem; }
-
-/* 符号选择 */
-.symbol-choice { display: flex; gap: 16px; justify-content: center; }
-.sym-btn {
-  background: rgba(255,255,255,0.22);
-  border: 2px solid rgba(255,255,255,0.4);
-  border-radius: 18px;
-  width: 80px; height: 80px;
-  font-size: 2.2rem;
-  font-weight: bold;
-  color: white;
-  cursor: pointer;
-  transition: all 0.25s cubic-bezier(0.34,1.56,0.64,1);
-  display: flex; align-items: center; justify-content: center;
-}
-.sym-btn:hover:not(:disabled) { background: rgba(255,255,255,0.38); transform: scale(1.1); }
-.sym-btn.chosen { background: rgba(255,255,100,0.3); border-color: #FFD700; }
-.sym-btn.correct { background: rgba(80,200,80,0.6) !important; border-color: #4ade80 !important; }
-.sym-btn.wrong { background: rgba(255,80,80,0.5) !important; border-color: #f87171 !important; }
-
-/* 反馈栏 */
-.feedback-bar {
-  display: flex;
-  align-items: center;
-  gap: 12px;
+.pg-header {
+  display: flex; align-items: center; justify-content: space-between;
   padding: 14px 18px;
-  border-radius: 20px;
-  margin: 10px 14px 14px;
-  backdrop-filter: blur(10px);
+  background: rgba(0,0,0,.15); backdrop-filter: blur(10px);
+  flex-shrink: 0;
 }
-.fb-correct { background: rgba(80,200,80,0.35); border: 1px solid rgba(80,200,80,0.5); }
-.fb-wrong { background: rgba(255,120,80,0.35); border: 1px solid rgba(255,120,80,0.5); }
-.fb-emoji { font-size: 2.2rem; flex-shrink: 0; }
-.fb-msg { flex: 1; font-size: 0.95rem; font-weight: bold; line-height: 1.4; }
-.fb-next {
-  background: white;
-  color: #333;
-  border: none;
-  border-radius: 16px;
-  padding: 10px 16px;
-  font-size: 0.9rem;
-  font-weight: bold;
-  cursor: pointer;
-  transition: transform 0.2s;
-  white-space: nowrap;
+.pg-header h2 { margin: 0; font-size: 1.15rem }
+.icon-btn {
+  background: rgba(255,255,255,.25); border: none;
+  border-radius: 50%; width: 40px; height: 40px;
+  font-size: 1.2rem; cursor: pointer; transition: transform .2s;
+  display:flex;align-items:center;justify-content:center
 }
-.fb-next:hover { transform: scale(1.06); }
-
-/* ════════ 结算 ════════ */
-.result-overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(0,0,0,0.7);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 200;
-  backdrop-filter: blur(6px);
-}
-
-.result-card {
-  background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);
-  color: #333;
-  border-radius: 30px;
-  padding: 30px 24px;
-  max-width: 400px;
-  width: 92%;
-  text-align: center;
-  position: relative;
-  overflow: hidden;
-  animation: popIn 0.5s cubic-bezier(0.34,1.56,0.64,1);
-}
-
-.result-confetti { position: absolute; inset: 0; pointer-events: none; }
-.confetti-piece { position: absolute; animation: confettiFall 2s ease forwards; }
-@keyframes confettiFall { 0%{opacity:1;transform:translateY(-20px) scale(0)} 50%{opacity:1;transform:translateY(0) scale(1)} 100%{opacity:0;transform:translateY(20px) scale(0.5)} }
-
-.result-bear { font-size: 4.5rem; display: block; animation: bearBounce 1s infinite; }
-.result-card h2 { font-size: 1.6rem; font-weight: 900; margin: 8px 0 16px; }
-
-.result-stars { margin-bottom: 16px; }
-.result-star {
-  font-size: 2.8rem;
-  display: inline-block;
-  margin: 0 4px;
-  opacity: 0.2;
-  transform: scale(0.6);
-  transition: all 0.4s cubic-bezier(0.34,1.56,0.64,1);
-}
-.result-star.lit { opacity: 1; transform: scale(1.2); animation: starLit 0.5s cubic-bezier(0.34,1.56,0.64,1) forwards; }
-@keyframes starLit { 0%{transform:scale(0)} 70%{transform:scale(1.3)} 100%{transform:scale(1.1)} }
-
-.result-stats { display: flex; justify-content: space-around; margin-bottom: 16px; background: rgba(255,255,255,0.4); border-radius: 16px; padding: 12px; }
-.rs-item { text-align: center; }
-.rs-label { font-size: 0.75rem; opacity: 0.7; display: block; margin-bottom: 3px; }
-.rs-val { font-size: 1.3rem; font-weight: 900; display: block; }
-.rs-val.green { color: #22c55e; }
-.rs-val.yellow { color: #f59e0b; }
-.rs-val.blue { color: #3b82f6; }
-
-.new-ach { background: rgba(255,215,0,0.3); border-radius: 14px; padding: 10px; margin-bottom: 14px; }
-.na-title { font-weight: bold; font-size: 0.92rem; margin-bottom: 6px; }
-.na-badges { display: flex; flex-direction: column; gap: 4px; }
-.na-badge { font-size: 0.88rem; background: rgba(255,255,255,0.4); border-radius: 8px; padding: 4px 10px; }
-
-.result-actions { display: flex; gap: 10px; justify-content: center; }
-.ra-btn { border: none; border-radius: 22px; padding: 12px 22px; font-size: 1rem; font-weight: bold; cursor: pointer; transition: transform 0.2s; }
-.ra-btn.primary { background: linear-gradient(45deg,#FF9A9E,#FAD0C4); color: #333; }
-.ra-btn.secondary { background: rgba(255,255,255,0.6); color: #444; }
-.ra-btn:hover { transform: scale(1.06); }
-
-/* ════════ 成就 ════════ */
-.achievements-screen { min-height: 100vh; }
-.ach-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 10px; padding: 14px; }
-.ach-card { border-radius: 16px; padding: 14px 10px; text-align: center; }
-.ach-card.unlocked { background: rgba(255,255,255,0.2); border: 2px solid rgba(255,215,0,0.6); }
-.ach-card.locked { background: rgba(0,0,0,0.2); opacity: 0.5; }
-.ach-icon-big { font-size: 2.2rem; margin-bottom: 6px; }
-.ach-name { font-size: 0.8rem; font-weight: bold; margin-bottom: 3px; }
-.ach-desc { font-size: 0.68rem; opacity: 0.75; line-height: 1.3; margin-bottom: 4px; }
-.ach-unlocked-at { font-size: 0.68rem; color: #86efac; }
-
-/* ════════ 家长报告 ════════ */
-.parent-screen { min-height: 100vh; overflow-y: auto; }
-.parent-profile-tabs { display: flex; gap: 8px; padding: 12px 16px 0; flex-wrap: wrap; }
-.ppt {
-  background: rgba(255,255,255,0.15);
-  border-radius: 14px;
-  padding: 8px 14px;
-  cursor: pointer;
-  font-size: 0.88rem;
-  transition: all 0.2s;
-  border: 1px solid rgba(255,255,255,0.2);
-}
-.ppt.active { background: rgba(255,255,255,0.35); border-color: rgba(255,255,255,0.6); font-weight: bold; }
-.ppt:hover { background: rgba(255,255,255,0.25); }
-
-.parent-content { padding: 14px 14px 80px; max-width: 700px; margin: 0 auto; }
-.pr-section { background: rgba(255,255,255,0.12); border-radius: 18px; padding: 16px; margin-bottom: 12px; }
-.pr-title { font-size: 0.95rem; font-weight: bold; margin-bottom: 12px; border-left: 4px solid rgba(255,255,255,0.7); padding-left: 8px; }
-.pr-cards { display: grid; grid-template-columns: repeat(4,1fr); gap: 8px; }
-.prc { border-radius: 12px; padding: 10px 6px; text-align: center; }
-.prc.blue{background:rgba(100,160,255,0.35)} .prc.green{background:rgba(100,220,100,0.35)} .prc.orange{background:rgba(255,160,80,0.35)} .prc.purple{background:rgba(180,100,255,0.35)}
-.prc-v { font-size: 1.3rem; font-weight: bold; }
-.prc-l { font-size: 0.65rem; opacity: 0.8; margin-top: 2px; }
-
-.skill-bars { display: flex; flex-direction: column; gap: 8px; }
-.sk-row { display: flex; align-items: center; gap: 8px; }
-.sk-label { font-size: 0.78rem; width: 90px; flex-shrink: 0; }
-.sk-bar-wrap { flex: 1; height: 10px; background: rgba(255,255,255,0.2); border-radius: 5px; overflow: hidden; }
-.sk-bar { height: 100%; border-radius: 5px; transition: width 0.8s ease; }
-.sk-pct { font-size: 0.78rem; width: 30px; text-align: right; font-weight: bold; }
-
-.adv-progress { display: flex; flex-direction: column; gap: 8px; }
-.adp-row { display: flex; align-items: center; gap: 8px; background: rgba(255,255,255,0.08); border-radius: 10px; padding: 9px 12px; }
-.adp-emoji { font-size: 1.4rem; }
-.adp-name { flex: 1; font-size: 0.88rem; font-weight: bold; }
-.adp-status { font-size: 0.78rem; }
-.adp-stars { font-size: 0.85rem; }
-.s-done{color:#86efac} .s-active{color:#fde68a} .s-locked{opacity:.5}
-
-.tips-section {}
-.tip-list { display: flex; flex-direction: column; gap: 7px; }
-.tip { background: rgba(255,255,255,0.12); border-radius: 10px; padding: 10px 12px; font-size: 0.85rem; line-height: 1.5; }
-
-/* ════════ 设置弹窗 ════════ */
-.settings-modal {
-  background: white;
-  color: #333;
-  border-radius: 24px;
-  max-width: 380px;
-  width: 92%;
-  overflow: hidden;
-  animation: popIn 0.3s ease;
-}
-.sm-header { background: linear-gradient(135deg,#667eea,#764ba2); color: white; padding: 16px 20px; font-size: 1.1rem; font-weight: bold; }
-.sm-body { padding: 14px 18px; }
-.sm-row { display: flex; align-items: center; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid #eee; font-size: 0.95rem; color: #555; }
-.sm-select { border: 1px solid #ddd; border-radius: 8px; padding: 6px 8px; font-size: 0.85rem; }
-.sm-save { display: block; width: calc(100% - 36px); margin: 14px 18px; background: linear-gradient(45deg,#4CAF50,#8BC34A); color: white; border: none; border-radius: 20px; padding: 12px; font-size: 1rem; font-weight: bold; cursor: pointer; transition: transform 0.2s; }
-.sm-save:hover { transform: scale(1.04); }
+.icon-btn:hover { transform: rotate(20deg) scale(1.1) }
 
 /* Toggle */
-.toggle { position: relative; width: 50px; height: 26px; }
-.toggle input { opacity: 0; width: 0; height: 0; }
-.slider { position: absolute; inset: 0; background: #ccc; border-radius: 26px; cursor: pointer; transition: 0.3s; }
-.slider:before { content:''; position: absolute; width: 20px; height: 20px; left: 3px; bottom: 3px; background: white; border-radius: 50%; transition: 0.3s; }
-.toggle input:checked + .slider { background: #667eea; }
-.toggle input:checked + .slider:before { transform: translateX(24px); }
+.tog{position:relative;width:52px;height:28px;display:inline-block}
+.tog input{opacity:0;width:0;height:0}
+.tslider{position:absolute;inset:0;background:#ccc;border-radius:28px;cursor:pointer;transition:.3s}
+.tslider:before{content:'';position:absolute;width:22px;height:22px;left:3px;bottom:3px;background:white;border-radius:50%;transition:.3s}
+.tog input:checked+.tslider{background:#4CAF50}
+.tog input:checked+.tslider:before{transform:translateX(24px)}
 
-/* ════════ 粒子特效 ════════ */
-.burst-layer { position: fixed; inset: 0; pointer-events: none; z-index: 999; }
-.burst-star { position: absolute; animation: burstFly 0.9s ease-out forwards; }
-@keyframes burstFly { 0%{transform:scale(0) rotate(0);opacity:1} 60%{opacity:1} 100%{transform:scale(1.2) rotate(360deg) translateY(-40px);opacity:0} }
+/* ═══ 选人界面 ═══ */
+.select-screen {
+  min-height: 100svh; display: flex; flex-direction: column;
+  align-items: center; justify-content: center; padding: 20px;
+  background: linear-gradient(160deg,#0093E9 0%,#80D0C7 100%);
+  position: relative; overflow: hidden;
+}
+.sky-deco { position: absolute; inset: 0; pointer-events: none }
+.deco-cloud { position: absolute; font-size: 2.8rem; animation: cFloat 9s ease-in-out infinite; opacity: .75 }
+@keyframes cFloat{0%,100%{transform:translateX(0)}50%{transform:translateX(18px)}}
+.deco-sun { position: absolute; right: 16px; top: 12px; font-size: 3rem; animation: sunSpin 25s linear infinite }
+@keyframes sunSpin{from{transform:rotate(0)}to{transform:rotate(360deg)}}
 
-/* ════════ 响应式 ════════ */
-@media (max-width: 480px) {
-  .gp-label,.gp-count { display: none; }
-  .island-map { grid-template-columns: repeat(2,1fr); }
-  .ach-grid { grid-template-columns: repeat(2,1fr); }
-  .pr-cards { grid-template-columns: repeat(2,1fr); }
-  .choice-btn { font-size: 1.5rem; padding: 14px 8px; }
-  .q-text { font-size: 1.5rem; }
-  .hero-title { font-size: 2rem; }
-  .main-actions { grid-template-columns: repeat(2,1fr); }
-  .spot-orchard { left: 4%; }
-  .spot-park { right: 2%; }
-  .choice-val { font-size: 1.6rem; }
+.select-hero { text-align: center; margin-bottom: 22px; position: relative; z-index: 1 }
+.hero-bear {
+  font-size: 6rem; cursor: pointer;
+  animation: bearBob 2.5s ease-in-out infinite;
+  display: block; margin-bottom: 8px;
+  filter: drop-shadow(0 8px 16px rgba(0,0,0,.2));
+}
+@keyframes bearBob{0%,100%{transform:translateY(0) scale(1)}50%{transform:translateY(-14px) scale(1.06)}}
+.hero-title { font-size: 2.8rem; font-weight: 900; margin: 0; letter-spacing: 3px; text-shadow: 0 4px 16px rgba(0,0,0,.2) }
+.hero-tagline { font-size: 1rem; opacity: .85; margin: 6px 0 0 }
+
+.select-hint { font-size: 1rem; opacity: .85; margin-bottom: 16px; position: relative; z-index: 1 }
+
+.profiles-grid {
+  display: flex; flex-wrap: wrap; gap: 16px;
+  justify-content: center; margin-bottom: 28px; position: relative; z-index: 1;
+}
+.profile-btn {
+  background: rgba(255,255,255,.25); backdrop-filter: blur(14px);
+  border: 2px solid rgba(255,255,255,.45); border-radius: 22px;
+  padding: 20px 18px; text-align: center; cursor: pointer; min-width: 120px;
+  transition: all .3s cubic-bezier(.34,1.56,.64,1);
+}
+.profile-btn:hover { transform: translateY(-8px) scale(1.08); background: rgba(255,255,255,.4) }
+.profile-btn:active { transform: scale(.94) }
+.pb-avatar { font-size: 3.5rem; display: block; margin-bottom: 8px }
+.pb-name { font-size: 1.05rem; font-weight: 900; margin-bottom: 6px }
+.pb-info { display: flex; gap: 8px; justify-content: center; font-size: .78rem; opacity: .85 }
+.add-btn { border-style: dashed; opacity: .7 }
+.add-btn:hover { opacity: 1 }
+.add-av { color: rgba(255,255,255,.7); font-size: 2.8rem }
+
+.parent-portal {
+  position: absolute; bottom: 22px;
+  background: rgba(255,255,255,.18); border-radius: 22px;
+  padding: 9px 20px; font-size: .88rem; cursor: pointer;
+  opacity: .75; transition: opacity .2s;
+}
+.parent-portal:hover { opacity: 1 }
+
+/* ═══ 创建账号弹窗 ═══ */
+.add-modal {
+  background: white; color: #333; border-radius: 30px;
+  padding: 28px 24px; max-width: 420px; width: 94%;
+  animation: popIn .4s cubic-bezier(.34,1.56,.64,1);
+}
+@keyframes popIn{from{transform:scale(.5);opacity:0}to{transform:scale(1);opacity:1}}
+.add-modal-title { font-size: 1.3rem; font-weight: 900; text-align: center; margin-bottom: 16px }
+.avi-grid { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin-bottom: 16px }
+.avi-item {
+  font-size: 2.2rem; width: 52px; height: 52px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; background: #f5f5f5; border: 2px solid transparent; transition: all .2s;
+}
+.avi-item:hover { background: #e8e8ff; transform: scale(1.1) }
+.avi-item.active { border-color: #667eea; background: #e8e8ff; transform: scale(1.15) }
+.field-label { font-size: .88rem; color: #666; margin-bottom: 6px }
+.name-field {
+  width: 100%; border: 2px solid #eee; border-radius: 14px;
+  padding: 12px 16px; font-size: 1.05rem; margin-bottom: 14px;
+  text-align: center; outline: none; transition: border-color .2s;
+}
+.name-field:focus { border-color: #667eea }
+.age-row { display: flex; gap: 10px; margin-bottom: 18px }
+.age-chip {
+  flex: 1; text-align: center; padding: 10px 0;
+  border-radius: 14px; cursor: pointer; background: #f0f0f0;
+  font-weight: 700; font-size: .95rem; border: 2px solid transparent; transition: all .2s;
+}
+.age-chip.active { background: #667eea; color: white }
+.age-chip:hover { transform: scale(1.04) }
+
+/* ═══ 主页 ═══ */
+.main-screen {
+  min-height: 100svh; display: flex; flex-direction: column;
+  background: linear-gradient(180deg,#87CEEB 0%,#B8F0B0 55%,#7DD56F 100%);
+}
+.main-top {
+  display: flex; align-items: center; gap: 10px;
+  padding: 12px 16px; position: relative; z-index: 10;
+  background: rgba(255,255,255,.12); backdrop-filter: blur(8px);
+}
+.player-chip {
+  display: flex; align-items: center; gap: 8px;
+  background: rgba(255,255,255,.3); border: 1px solid rgba(255,255,255,.5);
+  border-radius: 22px; padding: 7px 14px; cursor: pointer; transition: background .2s;
+}
+.player-chip:hover { background: rgba(255,255,255,.45) }
+.pc-av { font-size: 1.5rem }
+.pc-name { font-size: .9rem; font-weight: 900; color: #2d4a22 }
+.top-stats { flex: 1; display: flex; gap: 6px; justify-content: center; flex-wrap: wrap }
+.stat-pill {
+  background: rgba(255,255,255,.3); border: 1px solid rgba(255,255,255,.45);
+  border-radius: 14px; padding: 5px 10px; font-size: .8rem;
+  font-weight: 700; color: #2d4a22; white-space: nowrap;
+}
+.stat-pill.urgent { background: rgba(255,80,80,.4); color: white; animation: urgPulse 1s ease-in-out infinite }
+@keyframes urgPulse{0%,100%{transform:scale(1)}50%{transform:scale(1.07)}}
+
+/* 海岛地图 */
+.island-wrap { flex: 1; position: relative; overflow: hidden; min-height: 0 }
+.island-bg-sky {
+  position: absolute; top: 0; left: 0; right: 0; height: 120px;
+  pointer-events: none; overflow: hidden;
+}
+.ib-cloud { position: absolute; top: 10px; font-size: 2rem; animation: cFloat 10s ease-in-out infinite; opacity: .8 }
+.ib-bird { position: absolute; right: 20%; top: 35px; font-size: .85rem; animation: birdFly 14s ease-in-out infinite; opacity: .6 }
+@keyframes birdFly{0%,100%{transform:translateX(0) translateY(0)}50%{transform:translateX(20px) translateY(-6px)}}
+
+.island-map {
+  display: flex; flex-wrap: wrap; gap: 12px;
+  padding: 70px 16px 16px;
+  justify-content: center; align-items: flex-start;
+  position: relative; z-index: 5;
 }
 
-@media (min-height: 800px) {
-  .island-scene { min-height: 420px; }
+.island-node {
+  display: flex; flex-direction: column; align-items: center;
+  cursor: pointer; transition: transform .3s cubic-bezier(.34,1.56,.64,1);
+  position: relative;
+}
+.island-node.unlocked:hover { transform: translateY(-6px) scale(1.06) }
+.island-node.locked { opacity: .6; cursor: not-allowed }
+.island-node.done .in-bubble {
+  border-color: #4ade80;
+  background: rgba(200,255,215,.97);
+}
+.island-node.done .in-bubble::after {
+  border-top-color: rgba(200,255,215,.97);
+}
+
+.in-bubble {
+  background: rgba(255,255,255,.94); backdrop-filter: blur(8px);
+  border-radius: 20px; padding: 12px 14px; text-align: center;
+  min-width: 94px; max-width: 110px;
+  box-shadow: 0 6px 22px rgba(0,0,0,.12);
+  border: 2px solid rgba(255,255,255,.8); color: #333;
+  position: relative;
+}
+.in-bubble::after {
+  content: ''; position: absolute; bottom: -10px; left: 50%;
+  transform: translateX(-50%); border: 8px solid transparent;
+  border-top: 10px solid rgba(255,255,255,.94);
+}
+.in-emoji { font-size: 2rem; margin-bottom: 4px }
+.in-name { font-size: .75rem; font-weight: 900; color: #444; margin-bottom: 4px }
+.in-stars { font-size: .75rem }
+.in-lock { font-size: 1.2rem }
+
+.in-path-dot { font-size: .5rem; margin-top: 8px; opacity: .5 }
+
+/* 装饰层 */
+.map-deco { position: absolute; inset: 0; pointer-events: none; z-index: 2 }
+.md-tree { position: absolute; font-size: 2.4rem; pointer-events: none }
+.md-flower { position: absolute; font-size: 1.4rem; animation: flSway 4s ease-in-out infinite }
+@keyframes flSway{0%,100%{transform:rotate(-4deg)}50%{transform:rotate(4deg)}}
+.md-bear {
+  position: absolute; bottom: 60px; left: 46%;
+  font-size: 2.8rem; transition: all 1.2s ease;
+  filter: drop-shadow(0 4px 10px rgba(0,0,0,.2));
+}
+.md-bear.walk { animation: bearWalkA 1.5s ease-in-out }
+@keyframes bearWalkA{0%{transform:translateX(0)}25%{transform:translateX(-18px) rotate(-4deg)}75%{transform:translateX(18px) rotate(4deg)}100%{transform:translateX(0)}}
+.md-ocean {
+  position: absolute; bottom: 0; left: 0; right: 0;
+  text-align: center; font-size: 2rem; letter-spacing: 6px;
+  animation: waveA 3s ease-in-out infinite; opacity: .85;
+}
+@keyframes waveA{0%,100%{transform:translateY(0)}50%{transform:translateY(-5px)}}
+
+/* 底部导航 */
+.main-nav {
+  display: flex;
+  background: rgba(255,255,255,.93); backdrop-filter: blur(14px);
+  border-top: 1px solid rgba(255,255,255,.5);
+  padding: 8px 0 max(8px, env(safe-area-inset-bottom));
+}
+.nav-tab {
+  flex: 1; text-align: center; padding: 6px 0; cursor: pointer;
+  border-radius: 12px; margin: 0 4px;
+  transition: background .2s;
+}
+.nav-tab:hover,.nav-tab.active { background: rgba(102,126,234,.14) }
+.nav-tab.active .nt-lbl { color: #667eea; font-weight: 900 }
+.nt-ico { font-size: 1.55rem; display: block }
+.nt-lbl { font-size: .68rem; color: #888; margin-top: 2px }
+
+/* ═══ 练习大厅 ═══ */
+.practice-screen { min-height: 100svh; display: flex; flex-direction: column }
+.header-score { font-size: 1rem; font-weight: 900 }
+.practice-list { flex: 1; overflow-y: auto; padding: 14px 14px 80px }
+.pcat { margin-bottom: 20px }
+.pcat-head { display: flex; align-items: center; gap: 8px; margin-bottom: 10px }
+.pch-ico { font-size: 1.35rem }
+.pch-title { font-size: 1rem; font-weight: 900 }
+.pch-age { font-size: .75rem; background: rgba(255,255,255,.2); border-radius: 10px; padding: 2px 8px; opacity: .85 }
+.pcat-levels { display: flex; flex-direction: column; gap: 8px }
+.level-row {
+  display: flex; align-items: center; gap: 12px;
+  background: rgba(255,255,255,.16); backdrop-filter: blur(8px);
+  border-radius: 18px; padding: 14px 16px; cursor: pointer;
+  border: 1px solid rgba(255,255,255,.28);
+  transition: all .25s;
+}
+.level-row:hover { background: rgba(255,255,255,.28); transform: translateX(4px) }
+.lr-ico { font-size: 2.2rem; flex-shrink: 0 }
+.lr-info { flex: 1 }
+.lr-name { font-size: 1rem; font-weight: 900; margin-bottom: 3px }
+.lr-desc { font-size: .77rem; opacity: .75 }
+.lr-stars { font-size: .95rem; flex-shrink: 0 }
+
+/* ═══ 游戏界面 ═══ */
+.game-screen {
+  min-height: 100svh; display: flex; flex-direction: column;
+  transition: background .5s ease;
+}
+.game-top {
+  display: flex; align-items: center; gap: 10px;
+  padding: 12px 16px;
+  background: rgba(0,0,0,.35); backdrop-filter: blur(12px);
+  flex-shrink: 0; border-bottom: 1px solid rgba(255,255,255,.12);
+}
+.gp-wrap { flex: 1; min-width: 0 }
+.gp-title {
+  font-size: .82rem; font-weight: 700; margin-bottom: 5px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  color: rgba(255,255,255,.92); text-shadow: 0 1px 4px rgba(0,0,0,.5);
+}
+.gp-bar {
+  height: 20px; background: rgba(0,0,0,.4);
+  border-radius: 10px; position: relative; overflow: visible;
+  border: 1px solid rgba(255,255,255,.25);
+}
+.gp-fill {
+  height: 100%; background: linear-gradient(90deg,#FFD700,#FF6B35);
+  border-radius: 10px; transition: width .5s ease;
+  box-shadow: 0 0 10px rgba(255,180,0,.55);
+}
+.gp-bear {
+  position: absolute; top: -7px;
+  font-size: 1.7rem; transition: left .5s ease;
+  filter: drop-shadow(0 2px 6px rgba(0,0,0,.5));
+}
+.game-score-tag {
+  background: rgba(0,0,0,.4); border: 2px solid rgba(255,215,0,.7);
+  border-radius: 16px; padding: 7px 14px; font-size: 1rem; font-weight: 900;
+  white-space: nowrap; color: #FFE566;
+  text-shadow: 0 1px 4px rgba(0,0,0,.5);
+}
+
+/* 题目区 */
+.q-zone {
+  flex: 1; display: flex; align-items: flex-start; justify-content: center;
+  padding: 14px 14px 0; overflow-y: auto; min-height: 0;
+}
+.q-card {
+  /* 深色半透明卡片，在任何深色背景上均清晰 */
+  background: rgba(0,0,0,.38); backdrop-filter: blur(20px);
+  border-radius: 28px; padding: 20px;
+  width: 100%; max-width: 680px;
+  border: 1px solid rgba(255,255,255,.18);
+  box-shadow: 0 12px 40px rgba(0,0,0,.4);
+}
+.q-card.shake { animation: shakeA .55s ease }
+@keyframes shakeA {
+  0%,100%{ transform:translateX(0) }
+  20%{ transform:translateX(-12px) }
+  40%{ transform:translateX(12px) }
+  60%{ transform:translateX(-7px) }
+  80%{ transform:translateX(7px) }
+}
+
+/* 故事框 */
+.story-box {
+  display: flex; align-items: flex-start; gap: 10px;
+  background: rgba(255,255,255,.1); border-radius: 16px;
+  padding: 12px 14px; margin-bottom: 14px;
+  border: 1px solid rgba(255,255,255,.15);
+}
+.story-icon { font-size: 2rem; flex-shrink: 0; line-height: 1.2 }
+.story-text {
+  flex: 1; font-size: 1rem; line-height: 1.6; font-weight: 600;
+  color: #fff; text-shadow: 0 1px 3px rgba(0,0,0,.4);
+}
+.voice-mini {
+  background: rgba(255,255,255,.15); border: 1px solid rgba(255,255,255,.3);
+  border-radius: 50%; width: 34px; height: 34px; font-size: 1rem;
+  cursor: pointer; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  transition: background .2s; color: white;
+}
+.voice-mini:hover { background: rgba(255,255,255,.3) }
+
+/* 题目大字 */
+.q-question {
+  font-size: 2.1rem; font-weight: 900; text-align: center;
+  margin-bottom: 16px; line-height: 1.3; color: #fff;
+  text-shadow: 0 2px 12px rgba(0,0,0,.6);
+}
+
+/* ── 视觉区通用 ── */
+.vitem {
+  font-size: 2rem; display: inline-block;
+  animation: vPop .4s cubic-bezier(.34,1.56,.64,1) both;
+}
+.vitem.big { font-size: 2.5rem }
+@keyframes vPop { from{transform:scale(0);opacity:0} to{transform:scale(1);opacity:1} }
+
+/* 数数 */
+.v-count {
+  display: flex; flex-wrap: wrap; justify-content: center; gap: 8px;
+  min-height: 56px; padding: 10px;
+  background: rgba(255,255,255,.08); border-radius: 16px;
+  border: 1px solid rgba(255,255,255,.1);
+}
+
+/* 加法 */
+.v-add {
+  display: flex; align-items: center; justify-content: center;
+  gap: 10px; flex-wrap: wrap; padding: 8px 0 28px;
+}
+.va-group {
+  background: rgba(255,255,255,.12); border-radius: 14px;
+  padding: 10px 12px; display: flex; flex-direction: column;
+  align-items: center; gap: 4px; flex-wrap: wrap;
+  min-width: 56px; max-width: 145px;
+  border: 1px solid rgba(255,255,255,.18);
+}
+.va-items { display: flex; flex-wrap: wrap; gap: 4px; justify-content: center }
+.va-label {
+  font-size: .8rem; font-weight: 900; color: #FFE566;
+  text-shadow: 0 1px 3px rgba(0,0,0,.5); white-space: nowrap;
+}
+.va-plus, .va-eq {
+  font-size: 2rem; font-weight: 900; color: #fff;
+  text-shadow: 0 2px 8px rgba(0,0,0,.5);
+}
+.va-qmark {
+  font-size: 2.4rem; font-weight: 900; color: #FFE566;
+  background: rgba(255,215,0,.25); border-radius: 50%;
+  width: 60px; height: 60px; display: flex; align-items: center; justify-content: center;
+  border: 2px solid rgba(255,215,0,.55);
+  box-shadow: 0 0 14px rgba(255,215,0,.3);
+  text-shadow: 0 2px 6px rgba(0,0,0,.4);
+}
+
+/* 减法 */
+.v-sub { text-align: center; padding: 4px 0 }
+.vs-row {
+  display: flex; flex-wrap: wrap; justify-content: center; gap: 6px;
+  margin-bottom: 12px;
+  background: rgba(255,255,255,.08); border-radius: 14px; padding: 10px;
+  border: 1px solid rgba(255,255,255,.1);
+}
+.vitem.crossed {
+  opacity: .18; filter: grayscale(1);
+  text-decoration: line-through; transform: scale(.8);
+}
+.vs-hint {
+  font-size: .92rem; font-weight: 700; color: #FFB3A0;
+  background: rgba(200,50,30,.35); border-radius: 10px;
+  padding: 6px 14px; display: inline-block;
+  border: 1px solid rgba(255,100,70,.4);
+  text-shadow: 0 1px 3px rgba(0,0,0,.4);
+}
+
+/* 乘法 */
+.v-mul { display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 4px 0 }
+.vm-row { display: flex; align-items: center; gap: 10px }
+.vm-group {
+  display: flex; gap: 5px; flex-wrap: wrap;
+  background: rgba(255,255,255,.12); border-radius: 12px; padding: 8px 12px;
+  border: 1px solid rgba(255,255,255,.18);
+}
+.vm-arrow {
+  font-size: .8rem; font-weight: 700; color: #FFE566;
+  background: rgba(0,0,0,.25); border-radius: 8px; padding: 3px 8px;
+  text-shadow: 0 1px 3px rgba(0,0,0,.4);
+}
+.vm-desc {
+  font-size: .92rem; font-weight: 700; color: #fff;
+  background: rgba(255,255,255,.12); border-radius: 10px;
+  padding: 5px 16px; margin-top: 4px;
+  border: 1px solid rgba(255,255,255,.18);
+  text-shadow: 0 1px 3px rgba(0,0,0,.4);
+}
+
+/* 比大小 */
+.v-compare { display: flex; align-items: center; justify-content: center; gap: 20px; padding: 8px 0 }
+.vc-side { text-align: center }
+.vc-num {
+  font-size: 3.8rem; font-weight: 900; color: #fff;
+  background: rgba(255,255,255,.15); border-radius: 16px;
+  width: 80px; height: 80px; display: flex; align-items: center; justify-content: center;
+  margin-bottom: 8px; border: 2px solid rgba(255,255,255,.3);
+  text-shadow: 0 2px 10px rgba(0,0,0,.5);
+}
+.vc-dots { display: flex; flex-wrap: wrap; gap: 4px; justify-content: center; max-width: 84px }
+.vc-dot { font-size: .8rem; color: #FFE566; opacity: .9 }
+.vc-mid { text-align: center }
+.vc-scale { font-size: 2.2rem; margin-bottom: 6px }
+.vc-blank {
+  font-size: 2.4rem; font-weight: 900; color: rgba(255,255,255,.55);
+  background: rgba(255,255,255,.1); border-radius: 10px;
+  padding: 4px 14px; border: 2px dashed rgba(255,255,255,.35);
+}
+
+/* ═══ 答案区 ═══ */
+.answer-zone { padding: 12px 14px; flex-shrink: 0 }
+.choice-grid {
+  display: grid; grid-template-columns: repeat(2,1fr);
+  gap: 12px; max-width: 680px; margin: 0 auto;
+}
+.choice-btn {
+  /* 深色背景 + 白字，任何关卡背景上均清晰可读 */
+  background: rgba(255,255,255,.15);
+  border: 2px solid rgba(255,255,255,.45);
+  border-radius: 22px; padding: 20px 12px;
+  font-size: 2.2rem; font-weight: 900; color: #fff;
+  cursor: pointer; transition: all .25s cubic-bezier(.34,1.56,.64,1);
+  min-height: 80px; display: flex; align-items: center; justify-content: center;
+  text-shadow: 0 2px 10px rgba(0,0,0,.55);
+  box-shadow: 0 4px 18px rgba(0,0,0,.25), inset 0 1px 0 rgba(255,255,255,.15);
+}
+.choice-btn:hover:not(:disabled) {
+  background: rgba(255,255,255,.28); transform: scale(1.06);
+  box-shadow: 0 8px 28px rgba(0,0,0,.35);
+}
+.choice-btn:active { transform: scale(.94) }
+.choice-btn.chosen {
+  background: rgba(255,220,0,.35); border-color: #FFD700;
+  transform: scale(1.04); box-shadow: 0 0 20px rgba(255,215,0,.4);
+}
+.choice-btn.correct {
+  background: rgba(40,170,70,.75) !important; border-color: #5DF097 !important;
+  box-shadow: 0 0 22px rgba(60,200,100,.5) !important;
+  animation: correctA .5s ease;
+}
+.choice-btn.wrong {
+  background: rgba(210,40,40,.65) !important; border-color: #FF7070 !important;
+  box-shadow: 0 0 18px rgba(210,40,40,.45) !important;
+}
+.choice-btn:disabled { cursor: default }
+@keyframes correctA {
+  0%{transform:scale(1)} 50%{transform:scale(1.18)} 100%{transform:scale(1.05)}
+}
+
+.sym-grid { display: flex; gap: 16px; justify-content: center; padding: 8px 0 }
+.sym-btn {
+  background: rgba(255,255,255,.15); border: 2px solid rgba(255,255,255,.45);
+  border-radius: 22px; width: 90px; height: 90px;
+  font-size: 2.6rem; font-weight: 900; color: #fff;
+  cursor: pointer; transition: all .25s cubic-bezier(.34,1.56,.64,1);
+  display: flex; align-items: center; justify-content: center;
+  text-shadow: 0 2px 10px rgba(0,0,0,.55);
+  box-shadow: 0 4px 18px rgba(0,0,0,.25);
+}
+.sym-btn:hover:not(:disabled) { background: rgba(255,255,255,.28); transform: scale(1.1) }
+.sym-btn.chosen { background: rgba(255,220,0,.35); border-color: #FFD700 }
+.sym-btn.correct { background: rgba(40,170,70,.75) !important; border-color: #5DF097 !important }
+.sym-btn.wrong { background: rgba(210,40,40,.65) !important; border-color: #FF7070 !important }
+.sym-btn:disabled { cursor: default }
+
+/* ═══ 反馈条 ═══ */
+.feedback {
+  display: flex; align-items: center; gap: 12px;
+  padding: 14px 18px; margin: 8px 14px 14px;
+  border-radius: 22px; flex-shrink: 0;
+}
+.fb-ok {
+  background: rgba(20,140,60,.85); border: 2px solid rgba(100,230,130,.6);
+  box-shadow: 0 4px 20px rgba(20,140,60,.4);
+}
+.fb-no {
+  background: rgba(170,40,20,.85); border: 2px solid rgba(255,100,80,.6);
+  box-shadow: 0 4px 20px rgba(170,40,20,.4);
+}
+.fb-emoji { font-size: 2.4rem; flex-shrink: 0 }
+.fb-text {
+  flex: 1; font-size: 1rem; font-weight: 800; line-height: 1.4;
+  color: #fff; text-shadow: 0 1px 3px rgba(0,0,0,.4);
+}
+.fb-btn {
+  background: #fff; color: #222; border: none;
+  border-radius: 18px; padding: 12px 18px;
+  font-size: .95rem; font-weight: 900; cursor: pointer;
+  transition: transform .2s; white-space: nowrap;
+  box-shadow: 0 4px 14px rgba(0,0,0,.2);
+}
+.fb-btn:hover { transform: scale(1.06) }
+
+/* ═══ 结算 ═══ */
+.result-overlay {
+  position: fixed; inset: 0; background: rgba(0,0,0,.72);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 300; backdrop-filter: blur(7px);
+}
+.result-card {
+  background: linear-gradient(135deg,#a8edea,#fed6e3);
+  color: #333; border-radius: 32px;
+  padding: 30px 24px; max-width: 420px; width: 92%;
+  text-align: center; position: relative; overflow: hidden;
+  animation: popIn .5s cubic-bezier(.34,1.56,.64,1);
+}
+.rc-confetti { position: absolute; inset: 0; pointer-events: none }
+.cf { position: absolute; animation: cfFall 1.8s ease forwards }
+@keyframes cfFall{0%{opacity:1;transform:translateY(-20px) scale(0)}50%{opacity:1;transform:scale(1)}100%{opacity:0;transform:translateY(25px) scale(.5)}}
+.rc-bear { font-size: 4.5rem; animation: bearBob 1.2s infinite }
+.rc-title { font-size: 1.7rem; font-weight: 900; margin: 8px 0 14px }
+.rc-stars { margin-bottom: 16px }
+.res-star {
+  font-size: 3rem; display: inline-block; margin: 0 4px;
+  opacity: .18; transform: scale(.6); transition: all .4s cubic-bezier(.34,1.56,.64,1);
+}
+.res-star.lit { opacity: 1; transform: scale(1.2); animation: starLit .5s cubic-bezier(.34,1.56,.64,1) forwards }
+@keyframes starLit{0%{transform:scale(0)}70%{transform:scale(1.4)}100%{transform:scale(1.2)}}
+.rc-stats { display: flex; justify-content: space-around; background: rgba(255,255,255,.4); border-radius: 18px; padding: 12px; margin-bottom: 14px }
+.rcs { text-align: center }
+.rcs-v { font-size: 1.4rem; font-weight: 900; display: block }
+.rcs-l { font-size: .72rem; opacity: .7; margin-top: 2px }
+.rcs-v.green { color: #16a34a }
+.rcs-v.yellow { color: #d97706 }
+.rcs-v.blue { color: #2563eb }
+.new-ach { background: rgba(255,215,0,.35); border-radius: 14px; padding: 10px; margin-bottom: 12px }
+.na-hd { font-weight: 900; font-size: .9rem; margin-bottom: 6px }
+.na-row { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center }
+.na-item { background: rgba(255,255,255,.45); border-radius: 10px; padding: 4px 10px; font-size: .85rem }
+.rc-actions { display: flex; gap: 10px }
+.rc-actions .big-btn { flex: 1 }
+
+/* ═══ 成就 ═══ */
+.ach-screen { min-height: 100svh; display: flex; flex-direction: column }
+.ach-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 10px; padding: 14px; overflow-y: auto }
+.ach-tile { border-radius: 18px; padding: 14px 10px; text-align: center; transition: transform .2s }
+.ach-tile.got { background: rgba(255,255,255,.22); border: 2px solid rgba(255,215,0,.7) }
+.ach-tile:not(.got) { background: rgba(0,0,0,.2); opacity: .55 }
+.ach-tile.got:hover { transform: scale(1.05) }
+.at-icon { font-size: 2.3rem; margin-bottom: 6px }
+.at-name { font-size: .8rem; font-weight: 900; margin-bottom: 3px }
+.at-desc { font-size: .68rem; opacity: .78; line-height: 1.3 }
+
+/* ═══ 家长报告 ═══ */
+.parent-screen { min-height: 100svh; display: flex; flex-direction: column }
+.parent-head { background: rgba(20,40,80,.4) }
+.pr-tabs { display: flex; gap: 8px; padding: 12px 16px 0; flex-wrap: wrap }
+.pr-tab {
+  background: rgba(255,255,255,.16); border-radius: 14px;
+  padding: 8px 14px; cursor: pointer; font-size: .88rem;
+  transition: all .2s; border: 1px solid rgba(255,255,255,.2);
+}
+.pr-tab.active { background: rgba(255,255,255,.35); font-weight: 900; border-color: rgba(255,255,255,.6) }
+.pr-body { flex: 1; overflow-y: auto; padding: 14px 14px 80px; max-width: 800px; margin: 0 auto; width: 100% }
+.pr-row { display: grid; grid-template-columns: repeat(4,1fr); gap: 8px; margin-bottom: 12px }
+.pr-card { border-radius: 14px; padding: 12px 8px; text-align: center }
+.c-blue{background:rgba(100,160,255,.35)} .c-green{background:rgba(100,220,100,.35)}
+.c-orange{background:rgba(255,160,80,.35)} .c-purple{background:rgba(180,100,255,.35)}
+.prc-big { font-size: 1.4rem; font-weight: 900 }
+.prc-label { font-size: .65rem; opacity: .82; margin-top: 2px }
+.pr-section { background: rgba(255,255,255,.12); border-radius: 18px; padding: 16px; margin-bottom: 10px }
+.prs-title { font-size: .95rem; font-weight: 900; margin-bottom: 12px; border-left: 4px solid rgba(255,255,255,.7); padding-left: 8px }
+.skill-list { display: flex; flex-direction: column; gap: 8px }
+.sk-item { display: flex; align-items: center; gap: 8px }
+.sk-name { font-size: .78rem; width: 95px; flex-shrink: 0 }
+.sk-bar-bg { flex: 1; height: 10px; background: rgba(255,255,255,.22); border-radius: 5px; overflow: hidden }
+.sk-bar-fill { height: 100%; border-radius: 5px; transition: width .8s ease }
+.sk-pct { font-size: .78rem; font-weight: 900; width: 34px; text-align: right }
+.adv-list { display: flex; flex-direction: column; gap: 7px }
+.adv-row { display: flex; align-items: center; gap: 8px; background: rgba(255,255,255,.08); border-radius: 10px; padding: 9px 12px }
+.adv-emoji { font-size: 1.4rem }
+.adv-name { flex: 1; font-size: .88rem; font-weight: 700 }
+.adv-status { font-size: .78rem }
+.adv-stars { font-size: .85rem }
+.s-done{color:#86efac} .s-ing{color:#fde68a} .s-lock{opacity:.5}
+.pr-achs { display: flex; flex-wrap: wrap; gap: 8px; padding: 4px 0 }
+.pr-ach-dot { font-size: 1.6rem; opacity: .25; transition: opacity .3s }
+.pr-ach-dot.lit { opacity: 1 }
+.tip-sec {}
+.tip-item { background: rgba(255,255,255,.12); border-radius: 10px; padding: 10px 12px; font-size: .85rem; line-height: 1.55; margin-bottom: 6px }
+
+/* ═══ 设置 ═══ */
+.settings-modal {
+  background: white; color: #333; border-radius: 26px;
+  max-width: 400px; width: 92%; overflow: hidden;
+  animation: popIn .3s ease;
+}
+.sm-title { background: linear-gradient(135deg,#667eea,#764ba2); color: white; padding: 16px 22px; font-size: 1.1rem; font-weight: 900 }
+.sm-list { padding: 14px 20px }
+.sm-row { display: flex; align-items: center; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid #f0f0f0; font-size: .95rem; color: #555 }
+.sm-sel { border: 1px solid #ddd; border-radius: 9px; padding: 7px 10px; font-size: .86rem; color: #333 }
+.settings-modal .big-btn { margin: 14px 20px; width: calc(100% - 40px) }
+
+/* ═══ 星星爆炸 ═══ */
+.burst { position: fixed; inset: 0; pointer-events: none; z-index: 999 }
+.burst-p { position: absolute; animation: burstFly .85s ease-out forwards }
+@keyframes burstFly{0%{transform:scale(0) rotate(0);opacity:1}60%{opacity:1}100%{transform:scale(1.2) rotate(380deg) translate(20px,-30px);opacity:0}}
+
+/* ═══ 平板适配（≥768px） ═══ */
+@media (min-width: 768px) {
+  .profiles-grid { gap: 22px }
+  .profile-btn { min-width: 140px; padding: 24px 22px }
+  .pb-avatar { font-size: 4.2rem }
+  .pb-name { font-size: 1.2rem }
+
+  .island-map { padding: 80px 32px 20px; gap: 20px }
+  .in-bubble { min-width: 110px; padding: 16px 18px }
+  .in-emoji { font-size: 2.4rem }
+  .in-name { font-size: .85rem }
+
+  .pcat-levels { display: grid; grid-template-columns: repeat(2,1fr); gap: 12px }
+  .level-row { padding: 18px 20px }
+  .lr-ico { font-size: 2.6rem }
+  .lr-name { font-size: 1.1rem }
+
+  .q-zone { padding: 20px 20px 0 }
+  .q-card { padding: 26px 28px }
+  .q-question { font-size: 2.4rem }
+  .vitem { font-size: 2.4rem }
+  .vitem.big { font-size: 2.8rem }
+  .choice-grid { grid-template-columns: repeat(4,1fr); gap: 14px }
+  .choice-btn { font-size: 2.6rem; min-height: 90px }
+  .sym-btn { width: 100px; height: 100px; font-size: 3rem }
+  .feedback { padding: 16px 24px }
+  .fb-emoji { font-size: 2.8rem }
+  .fb-text { font-size: 1.05rem }
+
+  .ach-grid { grid-template-columns: repeat(4,1fr); gap: 14px }
+  .pr-row { grid-template-columns: repeat(4,1fr) }
+}
+
+/* ═══ 大平板/桌面（≥1024px） ═══ */
+@media (min-width: 1024px) {
+  .select-screen { gap: 20px }
+  .hero-bear { font-size: 8rem }
+  .hero-title { font-size: 3.4rem }
+  .profile-btn { min-width: 160px }
+
+  .main-screen { flex-direction: column }
+  .island-map { max-width: 900px; margin: 0 auto }
+
+  .practice-list { max-width: 800px; margin: 0 auto; width: 100% }
+  .pcat-levels { grid-template-columns: repeat(3,1fr) }
+
+  .q-zone { max-width: 800px; margin: 0 auto; width: 100%; padding: 20px 0 0 }
+  .answer-zone { max-width: 800px; margin: 0 auto; width: 100% }
+  .choice-grid { gap: 16px }
+  .choice-btn { font-size: 2.8rem }
+
+  .ach-grid { grid-template-columns: repeat(5,1fr) }
+  .pr-body { max-width: 900px }
+}
+
+/* ═══ 手机小屏适配（≤380px） ═══ */
+@media (max-width: 380px) {
+  .hero-title { font-size: 2.1rem }
+  .profile-btn { min-width: 100px; padding: 16px 14px }
+  .pb-avatar { font-size: 2.8rem }
+  .choice-btn { font-size: 1.8rem; padding: 18px 8px; min-height: 70px }
+  .q-question { font-size: 1.6rem }
+  .sym-btn { width: 74px; height: 74px; font-size: 2.2rem }
+  .ach-grid { grid-template-columns: repeat(2,1fr) }
+  .pr-row { grid-template-columns: repeat(2,1fr) }
+  .in-bubble { min-width: 82px; padding: 10px 10px }
 }
 </style>
