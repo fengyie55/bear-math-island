@@ -76,6 +76,9 @@
         <div class="top-stats">
           <span class="stat-pill star">⭐ {{ curP.totalScore }}</span>
           <span class="stat-pill fire">🔥 {{ curP.streakDays }}天</span>
+          <span class="stat-pill today" v-if="todayStats.answered > 0">
+            📝 今天{{ todayStats.answered }}题
+          </span>
           <span class="stat-pill time" :class="{urgent: remSecs < 120}">
             ⏰ {{ remTimeStr }}
           </span>
@@ -124,16 +127,16 @@
 
       <!-- 底部导航 -->
       <nav class="main-nav">
-        <div class="nav-tab active" @click="playBop">
+        <div :class="['nav-tab', screen==='main' ? 'active' : '']" @click="screen='main'; playBop()">
           <span class="nt-ico">🏝️</span><span class="nt-lbl">海岛</span>
         </div>
-        <div class="nav-tab" @click="screen='practice'">
+        <div :class="['nav-tab', screen==='practice' ? 'active' : '']" @click="screen='practice'">
           <span class="nt-ico">📚</span><span class="nt-lbl">练习</span>
         </div>
-        <div class="nav-tab" @click="screen='achievements'">
+        <div :class="['nav-tab', screen==='achievements' ? 'active' : '']" @click="screen='achievements'">
           <span class="nt-ico">🏅</span><span class="nt-lbl">成就</span>
         </div>
-        <div class="nav-tab" @click="openParent">
+        <div :class="['nav-tab', screen==='parent' ? 'active' : '']" @click="openParent">
           <span class="nt-ico">👨‍👩‍👧</span><span class="nt-lbl">报告</span>
         </div>
       </nav>
@@ -149,6 +152,19 @@
         <span class="header-score">⭐{{ curP.totalScore }}</span>
       </div>
       <div class="practice-list">
+        <!-- F2: 今日推荐横幅 -->
+        <div class="rec-banner" v-if="recommendedLevel" @click="launchPractice(recommendedLevel)">
+          <div class="rec-left">
+            <span class="rec-badge">今日推荐</span>
+            <span class="rec-ico">{{ recommendedLevel.icon }}</span>
+            <div class="rec-info">
+              <div class="rec-name">{{ recommendedLevel.name }}</div>
+              <div class="rec-sub">{{ recommendedLevel.desc }}</div>
+            </div>
+          </div>
+          <div class="rec-arrow">▶</div>
+        </div>
+
         <div v-for="cat in CATS" :key="cat.title" class="pcat">
           <div class="pcat-head">
             <span class="pch-ico">{{ cat.emoji }}</span>
@@ -176,6 +192,21 @@
     </div>
     </transition>
 
+    <!-- ━━━━━━━━━━━━━━━━━━━━━━━ 关卡过场画面（F2） ━━━━━━━━━━━━━━━━━━━━━━━ -->
+    <transition name="pop">
+    <div v-if="screen==='splash' && splashArea" class="splash-screen"
+         :style="{background: splashArea.bg}"
+         @click="skipSplash">
+      <div class="splash-inner">
+        <div class="splash-emoji">{{ splashArea.emoji }}</div>
+        <div class="splash-name">{{ splashArea.name }}</div>
+        <div class="splash-desc">{{ splashArea.splash }}</div>
+        <div class="splash-hint">点击屏幕开始 ▶</div>
+      </div>
+      <div class="splash-bear">🐻</div>
+    </div>
+    </transition>
+
     <!-- ━━━━━━━━━━━━━━━━━━━━━━━ 答题界面 ━━━━━━━━━━━━━━━━━━━━━━━ -->
     <transition name="fade-up">
     <div v-if="screen==='game'" class="game-screen" :style="{background: gameBg}">
@@ -189,6 +220,11 @@
             <div class="gp-fill" :style="{width: gProgress+'%'}"></div>
             <div class="gp-bear" :style="{left: Math.max(0, gProgress-5)+'%'}">🐻</div>
           </div>
+        </div>
+        <!-- F3: 连击热度计 -->
+        <div class="streak-tag" :class="'streak-' + Math.min(consecutiveCorrect, 5)" v-if="consecutiveCorrect > 0" :title="consecutiveCorrect + '连击'">
+          <span class="st-flame">{{ ['🔥','🔥','🔥🔥','🔥🔥🔥','💥'][Math.min(consecutiveCorrect-1,4)] }}</span>
+          <span class="st-num">×{{ consecutiveCorrect }}</span>
         </div>
         <div class="game-score-tag">⭐{{ gScore }}</div>
       </div>
@@ -210,25 +246,32 @@
 
           <!-- ── 视觉辅助区 ── -->
 
-          <!-- 数数：单组物品 -->
+          <!-- 数数：按行分组，每行最多5个，方便点数 -->
           <div v-if="cQ.vtype==='count'" class="v-count">
-            <span
-              v-for="(it,i) in cQ.items" :key="i"
-              class="vitem big"
-              :style="{animationDelay: i*0.07+'s'}"
-            >{{ it }}</span>
+            <div
+              v-for="(row, ri) in Math.ceil(cQ.items.length / 5)"
+              :key="ri"
+              class="vc-row"
+            >
+              <span
+                v-for="(it, i) in cQ.items.slice(ri*5, ri*5+5)"
+                :key="ri*5+i"
+                class="vitem big"
+                :style="{animationDelay: (ri*5+i)*0.07+'s'}"
+              >{{ it }}</span>
+            </div>
           </div>
 
-          <!-- 加法：两组+合并演示 -->
+          <!-- 加法：两组+合并演示（A组蓝色，B组橙色，讲述"左边+右边"） -->
           <div v-else-if="cQ.vtype==='add'" class="v-add">
-            <div class="va-group">
+            <div class="va-group va-group-a">
               <div class="va-items">
                 <span v-for="(it,i) in cQ.itemsA" :key="'a'+i" class="vitem">{{ it }}</span>
               </div>
               <div class="va-label">{{ cQ.a }}个</div>
             </div>
             <div class="va-plus">＋</div>
-            <div class="va-group">
+            <div class="va-group va-group-b">
               <div class="va-items">
                 <span v-for="(it,i) in cQ.itemsB" :key="'b'+i" class="vitem">{{ it }}</span>
               </div>
@@ -238,16 +281,36 @@
             <div class="va-qmark">？</div>
           </div>
 
-          <!-- 减法：全部展示，被减部分动态划掉 -->
+          <!-- 减法：全部展示，被减部分动态划掉（U5: >10时改用数字模式） -->
           <div v-else-if="cQ.vtype==='sub'" class="v-sub">
-            <div class="vs-row">
-              <span
-                v-for="(it,i) in cQ.allItems" :key="i"
-                class="vitem"
-                :class="{ crossed: i >= cQ.keep }"
-              >{{ it }}</span>
-            </div>
-            <div class="vs-hint">✂️ 去掉了 {{ cQ.b }} 个{{ cQ.itemEmoji }}，还剩几个？</div>
+            <!-- emoji模式：10个以内 -->
+            <template v-if="cQ.allItems.length <= 10">
+              <div class="vs-row">
+                <span
+                  v-for="(it,i) in cQ.allItems" :key="i"
+                  class="vitem"
+                  :class="{ crossed: i >= cQ.keep }"
+                >{{ it }}</span>
+              </div>
+              <div class="vs-hint">✂️ 去掉了 {{ cQ.b }} 个{{ cQ.itemEmoji }}，还剩几个？</div>
+            </template>
+            <!-- 数字模式：10个以上（U5） -->
+            <template v-else>
+              <div class="vs-num-mode">
+                <div class="vsn-total">
+                  <span class="vsn-emoji">{{ cQ.allItems[0] }}</span>
+                  <span class="vsn-num">{{ cQ.allItems.length }}</span>
+                  <span class="vsn-label">个</span>
+                </div>
+                <div class="vsn-minus">✂️ 去掉</div>
+                <div class="vsn-remove">
+                  <span class="vsn-emoji cross-emoji">{{ cQ.allItems[0] }}</span>
+                  <span class="vsn-num vsn-red">{{ cQ.b }}</span>
+                  <span class="vsn-label">个</span>
+                </div>
+                <div class="vsn-eq">＝ ？</div>
+              </div>
+            </template>
           </div>
 
           <!-- 乘法："几排几个"分组 -->
@@ -261,12 +324,16 @@
             <div class="vm-desc">共 {{ cQ.b }} 组，每组 {{ cQ.a }} 个</div>
           </div>
 
-          <!-- 比大小：天平视觉 -->
+          <!-- 比大小：天平视觉（U4: 点数上限10，超过只显示10个+标注） -->
           <div v-else-if="cQ.vtype==='compare'" class="v-compare">
             <div class="vc-side">
-              <div class="vc-num">{{ cQ.numA }}</div>
-              <div class="vc-dots">
+              <div class="vc-num" :class="{'vc-num-lg': cQ.numA >= 10}">{{ cQ.numA }}</div>
+              <div class="vc-dots" v-if="cQ.numA <= 10">
                 <span v-for="n in cQ.numA" :key="n" class="vc-dot">●</span>
+              </div>
+              <div class="vc-dots-overflow" v-else>
+                <span v-for="n in 10" :key="n" class="vc-dot">●</span>
+                <span class="vc-dot-more">+{{ cQ.numA - 10 }}</span>
               </div>
             </div>
             <div class="vc-mid">
@@ -274,9 +341,13 @@
               <div class="vc-blank">___</div>
             </div>
             <div class="vc-side">
-              <div class="vc-num">{{ cQ.numB }}</div>
-              <div class="vc-dots">
+              <div class="vc-num" :class="{'vc-num-lg': cQ.numB >= 10}">{{ cQ.numB }}</div>
+              <div class="vc-dots" v-if="cQ.numB <= 10">
                 <span v-for="n in cQ.numB" :key="n" class="vc-dot">●</span>
+              </div>
+              <div class="vc-dots-overflow" v-else>
+                <span v-for="n in 10" :key="n" class="vc-dot">●</span>
+                <span class="vc-dot-more">+{{ cQ.numB - 10 }}</span>
               </div>
             </div>
           </div>
@@ -302,19 +373,24 @@
           >{{ opt }}</button>
         </div>
 
-        <!-- 符号选项（比大小） -->
+        <!-- 符号选项（比大小）— U6: 文字+鳄鱼嘴辅助 -->
         <div class="sym-grid" v-else-if="cQ.type==='symbol'">
           <button
-            v-for="sym in ['＜','＝','＞']" :key="sym"
+            v-for="(s,si) in [{sym:'＜',label:'左边小',hint:'🐊·'},{sym:'＝',label:'一样多',hint:'⚖️'},{sym:'＞',label:'左边大',hint:'·🐊'}]"
+            :key="s.sym"
             class="sym-btn"
             :class="{
-              chosen: chosen===sym,
-              correct: answered && sym===cQ.answer,
-              wrong: answered && chosen===sym && sym!==cQ.answer
+              chosen: chosen===s.sym,
+              correct: answered && s.sym===cQ.answer,
+              wrong: answered && chosen===s.sym && s.sym!==cQ.answer
             }"
-            @click="pickSym(sym)"
+            @click="pickSym(s.sym)"
             :disabled="answered"
-          >{{ sym }}</button>
+          >
+            <div class="sym-main">{{ s.sym }}</div>
+            <div class="sym-hint">{{ s.hint }}</div>
+            <div class="sym-label">{{ s.label }}</div>
+          </button>
         </div>
       </div>
 
@@ -322,9 +398,22 @@
       <transition name="slide-up">
       <div class="feedback" v-if="answered" :class="lastOK?'fb-ok':'fb-no'">
         <div class="fb-emoji">{{ lastOK ? feedEmoji : '🤔' }}</div>
-        <div class="fb-text">{{ lastOK ? feedMsg : failMsg }}</div>
-        <button class="fb-btn" @click="doNext">
-          {{ isLastQ ? '🎉 看结果！' : lastOK ? '继续 ▶' : '再试试 💪' }}
+        <div class="fb-body">
+          <div class="fb-text">{{ lastOK ? feedMsg : failMsg }}</div>
+          <!-- U2: 答对时显示自动推进倒计时环 -->
+          <div v-if="lastOK && autoNext" class="fb-auto-hint">自动继续…</div>
+        </div>
+        <!-- 答对：倒计时圆形进度 + 点击立即跳过 -->
+        <div v-if="lastOK" class="fb-auto-ring" @click="doNext" title="点击立即继续">
+          <svg viewBox="0 0 36 36" class="far-svg">
+            <circle class="far-track" cx="18" cy="18" r="15.9"/>
+            <circle class="far-fill" cx="18" cy="18" r="15.9"/>
+          </svg>
+          <span class="far-icon">▶</span>
+        </div>
+        <!-- 答错：我知道了按钮 -->
+        <button v-else class="fb-btn" @click="doNext">
+          {{ isLastQ ? '🎉 看结果！' : '我知道了 👍' }}
         </button>
       </div>
       </transition>
@@ -336,7 +425,7 @@
     <div class="result-overlay" v-if="screen==='result'">
       <div class="result-card">
         <div class="rc-confetti">
-          <span v-for="n in 24" :key="n" class="cf" :style="cfStyle(n)">
+          <span v-for="(cfg,n) in cfConfigs" :key="n" class="cf" :style="cfg">
             {{ ['⭐','🎉','✨','🎊','💫'][n%5] }}
           </span>
         </div>
@@ -347,7 +436,7 @@
         </div>
         <div class="rc-stats">
           <div class="rcs">
-            <div class="rcs-v green">{{ correctCnt }}/{{ totalQ }}</div>
+            <div class="rcs-v green">{{ correctCnt }}/{{ baseQ }}</div>
             <div class="rcs-l">答对</div>
           </div>
           <div class="rcs">
@@ -355,7 +444,7 @@
             <div class="rcs-l">星星</div>
           </div>
           <div class="rcs">
-            <div class="rcs-v blue">{{ Math.round(correctCnt/totalQ*100) }}%</div>
+            <div class="rcs-v blue">{{ Math.round(correctCnt/baseQ*100) }}%</div>
             <div class="rcs-l">正确率</div>
           </div>
         </div>
@@ -517,6 +606,34 @@
       </div>
     </div>
 
+    <!-- U2: 时间归零横幅 -->
+    <transition name="slide-up">
+    <div class="time-up-banner" v-if="showTimeUp">
+      <span class="tub-emoji">🌙</span>
+      <div class="tub-text">今天的学习时间到啦！<br>明天继续加油！</div>
+      <span class="tub-emoji">⭐</span>
+    </div>
+    </transition>
+
+    <!-- F5: 成就获得弹窗 -->
+    <transition name="pop">
+    <div class="ach-popup-bg" v-if="showAchPopup" @click="closeAchPopup">
+      <div class="ach-popup">
+        <div class="ap-title">🏅 新成就解锁！</div>
+        <div class="ap-list">
+          <div class="ap-item" v-for="a in newAchs" :key="a.id">
+            <div class="ap-icon">{{ a.icon }}</div>
+            <div class="ap-info">
+              <div class="ap-name">{{ a.name }}</div>
+              <div class="ap-desc">{{ a.desc }}</div>
+            </div>
+          </div>
+        </div>
+        <div class="ap-hint">点击任意处关闭</div>
+      </div>
+    </div>
+    </transition>
+
     <!-- 星星爆炸特效 -->
     <div class="burst" v-if="showBurst">
       <span v-for="n in 18" :key="n" class="burst-p" :style="burstStyle(n)">
@@ -542,15 +659,21 @@ function shuffle(arr) {
   return a
 }
 function makeOpts(ans, min = 0, max = 20, n = 4) {
+  // 先把范围内所有可能值加进候选，防止死循环
+  const rangeSize = max - min + 1
+  const realN = Math.min(n, rangeSize)   // 实际选项数不能超过范围内整数个数
   const s = new Set([ans])
-  const ds = shuffle([-3,-2,-1,1,2,3,-4,4])
+  const ds = shuffle([-3,-2,-1,1,2,3,-4,4,-5,5])
   for (const d of ds) {
-    if (s.size >= n) break
+    if (s.size >= realN) break
     const v = ans + d
     if (v >= min && v <= max) s.add(v)
   }
-  while (s.size < n) {
-    const v = ri(Math.max(min, ans - 4), Math.min(max, ans + 4))
+  // 兜底：用有限次随机填满，最多尝试 50 次
+  let tries = 0
+  while (s.size < realN && tries < 50) {
+    tries++
+    const v = ri(min, max)
     s.add(v)
   }
   return shuffle([...s])
@@ -678,11 +801,15 @@ function mkMul(mults = [2, 3]) {
   }
 }
 
-// 比大小
+// 比大小（防 max<=1 时死循环）
 function mkCmp(max = 10) {
-  const numA = ri(0, max)
-  let numB
-  do { numB = ri(0, max) } while (numB === numA)
+  const safeMax = Math.max(2, max)
+  const numA = ri(0, safeMax)
+  // 最多尝试20次，兜底强制不等
+  let numB = ri(0, safeMax)
+  let tries = 0
+  while (numB === numA && tries < 20) { numB = ri(0, safeMax); tries++ }
+  if (numB === numA) numB = numA === 0 ? 1 : numA - 1
   const ans = numA < numB ? '＜' : numA > numB ? '＞' : '＝'
   const sc = getScene()
 
@@ -746,44 +873,44 @@ const CATS = [
 const AREAS = [
   {
     id: 'orchard', name: '苹果园', emoji: '🍎',
-    bg: 'linear-gradient(160deg,#1a5c2e,#2d8a50)',   // 深绿 → 翠绿
+    bg: 'linear-gradient(160deg,#1a5c2e,#2d8a50)',
     unlocked: true, completed: false, stars: 0,
-    genQ: () => mkMix(5),
+    genQ: () => mkMix(5),                                          // 纯加减，5以内
     splash: '帮小熊采苹果，解决数学难题！🍎',
   },
   {
     id: 'beach', name: '阳光沙滩', emoji: '🏖️',
-    bg: 'linear-gradient(160deg,#7c4a00,#c07820)',   // 深棕 → 琥珀
+    bg: 'linear-gradient(160deg,#7c4a00,#c07820)',
     unlocked: false, completed: false, stars: 0,
-    genQ: () => mkMix(8),
+    genQ: () => mkMix(8),                                          // 纯加减，8以内
     splash: '在沙滩找贝壳，数学藏在浪花里！🌊',
   },
   {
     id: 'park', name: '欢乐公园', emoji: '🎡',
-    bg: 'linear-gradient(160deg,#0d4f8c,#1a7abf)',   // 深蓝 → 天蓝
+    bg: 'linear-gradient(160deg,#0d4f8c,#1a7abf)',
     unlocked: false, completed: false, stars: 0,
-    genQ: () => mkMix(10),
+    genQ: () => Math.random() > 0.3 ? mkMix(10) : mkCmp(10),      // 加减+比大小
     splash: '游乐园大冒险，旋转木马等你！🎢',
   },
   {
     id: 'treehouse', name: '神奇树屋', emoji: '🌲',
-    bg: 'linear-gradient(160deg,#2d4a00,#4a7c10)',   // 墨绿 → 草绿
+    bg: 'linear-gradient(160deg,#2d4a00,#4a7c10)',
     unlocked: false, completed: false, stars: 0,
-    genQ: () => Math.random() > 0.35 ? mkMix(10) : mkMul([2,3]),
+    genQ: () => { const r = Math.random(); return r < 0.45 ? mkMix(10) : r < 0.75 ? mkCmp(10) : mkMul([2,3]) },
     splash: '树屋里的松鼠藏了秘密！🌰',
   },
   {
     id: 'cave', name: '水晶洞窟', emoji: '🔮',
-    bg: 'linear-gradient(160deg,#1e0a4a,#4a1a7c)',   // 深紫 → 紫罗兰
+    bg: 'linear-gradient(160deg,#1e0a4a,#4a1a7c)',
     unlocked: false, completed: false, stars: 0,
-    genQ: () => Math.random() > 0.4 ? mkMix(15) : mkMul([2,3,4]),
+    genQ: () => { const r = Math.random(); return r < 0.4 ? mkMix(15) : r < 0.7 ? mkMul([2,3,4]) : mkCmp(15) },
     splash: '水晶洞里发现宝藏！✨',
   },
   {
     id: 'volcano', name: '彩虹火山', emoji: '🌋',
-    bg: 'linear-gradient(160deg,#6b0a0a,#c0220e)',   // 深红 → 火红
+    bg: 'linear-gradient(160deg,#6b0a0a,#c0220e)',
     unlocked: false, completed: false, stars: 0,
-    genQ: () => Math.random() > 0.5 ? mkMix(20) : mkMul([2,3,4,5]),
+    genQ: () => { const r = Math.random(); return r < 0.4 ? mkMix(20) : r < 0.7 ? mkMul([2,3,4,5]) : mkCmp(20) },
     splash: '彩虹火山，终极大挑战！🌈',
   },
 ]
@@ -805,11 +932,30 @@ const ACHS = [
 ]
 
 // ═══════════════ 存储 ═══════════════
-const STORE_KEY = 'bearMath_v4'
+const STORE_KEY = 'bearMath_v5'
+const STORE_KEY_OLD = 'bearMath_v4'
 const AVATARS = ['🐻','🐼','🐱','🐶','🐰','🦊','🐸','🦁','🐮','🐧','🦄','🐯']
 
 function loadStore() {
-  try { return JSON.parse(localStorage.getItem(STORE_KEY) || 'null') } catch { return null }
+  try {
+    // B7: 先读 v5，若无则迁移 v4 数据
+    const v5 = JSON.parse(localStorage.getItem(STORE_KEY) || 'null')
+    if (v5) return v5
+    const v4 = JSON.parse(localStorage.getItem(STORE_KEY_OLD) || 'null')
+    if (v4) {
+      // 迁移：补充 v5 新增字段
+      if (v4.profiles) {
+        v4.profiles.forEach(p => {
+          if (!p.todayDate)    p.todayDate    = ''
+          if (!p.todayAnswered) p.todayAnswered = 0
+          if (!p.todayCorrect)  p.todayCorrect  = 0
+        })
+      }
+      saveStore(v4)   // 以 v5 key 保存
+      return v4
+    }
+    return null
+  } catch { return null }
 }
 function saveStore(d) {
   try { localStorage.setItem(STORE_KEY, JSON.stringify(d)) } catch {}
@@ -821,6 +967,7 @@ function defaultProfile(id, name, avatar, age) {
     totalScore: 0, streakDays: 1,
     totalAnswered: 0, totalCorrect: 0,
     lastPlayDate: '',
+    todayDate: '', todayAnswered: 0, todayCorrect: 0,   // F1: 今日摘要
     unlockedAchievements: [],
     levelStars: {},
     subjectStats: {},
@@ -953,6 +1100,7 @@ export default {
     function selectProfile(p) {
       curPId.value = p.id
       updateStreak(p)
+      startTimer()   // B4: 切换用户时重置计时
       screen.value = 'main'
       doAnimBear()
       const greet = `你好，${p.name}！准备好了吗？出发！`
@@ -987,11 +1135,24 @@ export default {
 
     // ── 计时 ──
     const remSecs = ref(900)
+    const showTimeUp = ref(false)
     let timer = null
     function startTimer() {
       remSecs.value = (settings.dailyMinutes || 15) * 60
+      showTimeUp.value = false
       clearInterval(timer)
-      timer = setInterval(() => { if (remSecs.value > 0) remSecs.value-- }, 1000)
+      timer = setInterval(() => {
+        if (remSecs.value > 0) {
+          remSecs.value--
+          // U2: 归零时弹出提示
+          if (remSecs.value === 0) {
+            showTimeUp.value = true
+            say('今天的学习时间到啦，明天继续加油！')
+            if (settings.sound) soundWin()
+            setTimeout(() => { showTimeUp.value = false }, 4000)
+          }
+        }
+      }, 1000)
     }
     const remTimeStr = computed(() => {
       const m = Math.floor(remSecs.value / 60)
@@ -1004,19 +1165,42 @@ export default {
       id: a.id, name: a.name, emoji: a.emoji, unlocked: a.id === 'orchard', completed: false, stars: 0,
     })))
 
+    // F2: 关卡入场过场数据
+    const splashArea = ref(null)   // 当前正在展示过场的区域配置
+
     function startArea(area) {
       const cfg = AREAS.find(a => a.id === area.id)
       if (!cfg) return
-      gameMode.value = 'adventure'
-      areaId.value = area.id
-      areaName.value = area.name
-      gameBg.value = cfg.bg
-      qs.value = Array(8).fill(null).map(() => cfg.genQ())
-      resetGame()
-      screen.value = 'game'
-      doAnimBear()
+      // 先展示 2.5 秒过场画面
+      splashArea.value = cfg
+      screen.value = 'splash'
       say(cfg.splash)
       if (settings.sound) soundClick()
+      setTimeout(() => {
+        if (screen.value !== 'splash') return  // 用户已手动跳过
+        launchAreaGame(cfg)
+      }, 2500)
+    }
+
+    function skipSplash() {
+      if (!splashArea.value) return
+      if (splashArea.value._lvRef) {
+        launchPracticeGame(splashArea.value._lvRef)   // F4: 练习模式跳过
+      } else {
+        launchAreaGame(splashArea.value)
+      }
+    }
+
+    function launchAreaGame(cfg) {
+      splashArea.value = null
+      gameMode.value = 'adventure'
+      areaId.value = cfg.id
+      areaName.value = cfg.name
+      gameBg.value = cfg.bg
+      qs.value = Array(8).fill(null).map(() => cfg.genQ())
+      screen.value = 'game'
+      resetGame()
+      doAnimBear()
     }
 
     function onClickLocked(area) {
@@ -1026,15 +1210,32 @@ export default {
 
     // ── 练习 ──
     function launchPractice(lv) {
+      // F4: 简版过场（0.8秒）
+      splashArea.value = {
+        emoji: lv.icon,
+        name: lv.name,
+        bg: 'linear-gradient(160deg,#1a1a5c,#2d1b69)',
+        splash: `准备好了吗？${lv.name}，开始！`,
+        _lvRef: lv,   // 携带关卡引用，供 launchPracticeGame 使用
+      }
+      screen.value = 'splash'
+      say(`开始${lv.name}！加油！`)
+      if (settings.sound) soundClick()
+      setTimeout(() => {
+        if (screen.value !== 'splash') return
+        launchPracticeGame(lv)
+      }, 800)
+    }
+
+    function launchPracticeGame(lv) {
+      splashArea.value = null
       gameMode.value = 'practice'
       lvKey.value = lv.key
       lvName.value = lv.name
-      gameBg.value = 'linear-gradient(160deg,#1a1a5c,#2d1b69)'  // 深蓝紫，与白字高对比
+      gameBg.value = 'linear-gradient(160deg,#1a1a5c,#2d1b69)'
       qs.value = Array(8).fill(null).map(() => lv.gen())
-      resetGame()
       screen.value = 'game'
-      say(`开始${lv.name}！加油！`)
-      if (settings.sound) soundClick()
+      resetGame()
     }
 
     // ── 游戏状态 ──
@@ -1049,6 +1250,7 @@ export default {
     const qs = ref([])
     const qIdx = ref(0)
     const totalQ = computed(() => qs.value.length)
+    const baseQ = ref(8)    // B2/B3: 固定初始题目数，插题不影响进度和结算分母
     const gScore = ref(0)
     const correctCnt = ref(0)
     const wrongCnt = ref(0)
@@ -1057,19 +1259,34 @@ export default {
     const lastOK = ref(false)
     const shaking = ref(false)
     const qKey = ref(0)
-    const perQWrong = ref(0)   // 每题错误次数，用于减分
+    const perQWrong = ref(0)
+    const consecutiveCorrect = ref(0)   // F3: 连续答对计数
+
+    // 答对自动推进倒计时
+    const autoNext = ref(false)
+    let autoNextTimer = null
 
     const cQ = computed(() => qs.value[qIdx.value] || {})
-    const gProgress = computed(() => Math.round((qIdx.value / (totalQ.value || 1)) * 100))
+    // B3: 进度条分母用 baseQ，插题不倒退
+    const gProgress = computed(() => Math.round((qIdx.value / (baseQ.value || 1)) * 100))
     const isLastQ = computed(() => qIdx.value + 1 >= totalQ.value)
+
+    // 当前关卡的题目生成函数（用于答错后生成同类型新题）
+    function getCurGen() {
+      if (gameMode.value === 'adventure') {
+        return AREAS.find(a => a.id === areaId.value)?.genQ
+      } else {
+        return CATS.flatMap(c => c.levels).find(l => l.key === lvKey.value)?.gen
+      }
+    }
 
     // 反馈
     const feedEmoji = ref('🎉')
     const feedMsg = ref('太棒了！')
     const failMsg = computed(() => {
       const q = cQ.value
-      if (q.type === 'symbol') return `应该填「${q.answer}」，再想想！`
-      return `正确答案是 ${q.answer}，别灰心，再来一次！💪`
+      if (q.type === 'symbol') return `正确答案是「${q.answer}」，下次加油！`
+      return `正确答案是 ${q.answer}，下题再来一次！💪`
     })
 
     const FEED_OK = [
@@ -1090,74 +1307,75 @@ export default {
       lastOK.value = false
       shaking.value = false
       perQWrong.value = 0
+      consecutiveCorrect.value = 0
+      autoNext.value = false
+      clearTimeout(autoNextTimer)
+      baseQ.value = qs.value.length   // B2/B3: 记录初始题目数
       qKey.value++
-      // 进入第一题朗读
       setTimeout(() => sayQuestion(), 500)
+    }
+
+    function handleAnswer(correct, statKey) {
+      answered.value = true
+      lastOK.value = correct
+      recStat(statKey, correct)
+      if (correct) {
+        correctCnt.value++
+        const bonus = perQWrong.value === 0 ? 15 : 10
+        gScore.value += bonus
+        perQWrong.value = 0
+        consecutiveCorrect.value++   // F3: 累加连击
+        const [em, msg] = FEED_OK[ri(0, FEED_OK.length - 1)]
+        feedEmoji.value = em
+        feedMsg.value = msg
+        trigBurst()
+        if (settings.sound) soundCorrect()
+        say(msg)
+        // 答对后 1.6 秒自动推进
+        autoNext.value = true
+        autoNextTimer = setTimeout(() => {
+          autoNext.value = false
+          doNext()
+        }, 1600)
+      } else {
+        perQWrong.value++
+        wrongCnt.value++
+        consecutiveCorrect.value = 0   // F3: 连击清零
+        shaking.value = true
+        setTimeout(() => { shaking.value = false }, 600)
+        if (settings.sound) soundWrong()
+      }
     }
 
     function pick_(opt, idx) {
       if (answered.value) return
       chosen.value = idx
-      answered.value = true
-      const correct = opt === cQ.value.answer
-      lastOK.value = correct
-      if (correct) {
-        correctCnt.value++
-        const bonus = perQWrong.value === 0 ? 15 : 10
-        gScore.value += bonus
-        const [em, msg] = FEED_OK[ri(0, FEED_OK.length - 1)]
-        feedEmoji.value = em
-        feedMsg.value = msg
-        trigBurst()
-        if (settings.sound) soundCorrect()
-        say(msg)
-      } else {
-        perQWrong.value++
-        wrongCnt.value++
-        shaking.value = true
-        setTimeout(() => { shaking.value = false }, 600)
-        if (settings.sound) soundWrong()
-        say('没关系，再想想！')
-      }
-      recStat(lvKey.value || areaId.value, correct)
+      handleAnswer(opt === cQ.value.answer, lvKey.value || areaId.value)
+      if (!lastOK.value) say(`正确答案是${cQ.value.answer}，记住了吗？`)
     }
 
     function pickSym_(sym) {
       if (answered.value) return
       chosen.value = sym
-      answered.value = true
-      const correct = sym === cQ.value.answer
-      lastOK.value = correct
-      if (correct) {
-        correctCnt.value++
-        gScore.value += 10
-        const [em, msg] = FEED_OK[ri(0, FEED_OK.length - 1)]
-        feedEmoji.value = em
-        feedMsg.value = msg
-        trigBurst()
-        if (settings.sound) soundCorrect()
-        say(msg)
-      } else {
-        perQWrong.value++
-        wrongCnt.value++
-        shaking.value = true
-        setTimeout(() => { shaking.value = false }, 600)
-        if (settings.sound) soundWrong()
-        say('再想想哦！')
-      }
-      recStat(lvKey.value, correct)
+      handleAnswer(sym === cQ.value.answer, lvKey.value || areaId.value)  // B5: 统一用 || areaId
+      if (!lastOK.value) say(`应该填${cQ.value.answer}，记住了吗？`)
     }
 
     function doNext() {
-      if (!lastOK.value) {
-        // 答错：重答同题
-        answered.value = false
-        chosen.value = null
-        return
-      }
+      clearTimeout(autoNextTimer)
+      autoNext.value = false
       answered.value = false
       chosen.value = null
-      perQWrong.value = 0
+
+      if (!lastOK.value) {
+        // B1: 答错 → 从当前关卡生成一道新的同类型题，插到下一题位置
+        const gen = getCurGen()
+        if (gen) {
+          const newQ = gen()
+          qs.value.splice(qIdx.value + 1, 0, newQ)
+        }
+      }
+
       if (isLastQ.value) {
         finishGame()
       } else {
@@ -1172,21 +1390,40 @@ export default {
     const resTitle = ref('')
     const resBear = ref('🐻')
     const newAchs = ref([])
+    // B2: 预计算 confetti 位置，防止每次渲染抖动
+    const cfConfigs = ref([])
+
+    function genCfConfigs() {
+      cfConfigs.value = Array.from({length: 24}, (_, i) => ({
+        left: (5 + Math.random() * 88) + '%',
+        top:  (5 + Math.random() * 75) + '%',
+        animationDelay: i * 0.05 + 's',
+        transform: `rotate(${Math.random()*360}deg)`,
+        fontSize: (0.9 + Math.random() * 0.7) + 'rem',
+      }))
+    }
 
     function finishGame() {
-      const acc = correctCnt.value / totalQ.value
+      // B2: 用 baseQ（初始题目数）作分母，插题不影响正确率和星级
+      const acc = correctCnt.value / Math.max(1, baseQ.value)
       resStars.value = acc >= 1 ? 3 : acc >= 0.7 ? 2 : 1
       resTitle.value = acc >= 1 ? '完美通关！🎊' : acc >= 0.7 ? '非常厉害！🌟' : '继续加油！💪'
       resBear.value = acc >= 1 ? '🥳' : acc >= 0.7 ? '😄' : '🐻'
 
       const p = curP.value
       p.totalScore += gScore.value
-      p.totalAnswered = (p.totalAnswered || 0) + totalQ.value
+      p.totalAnswered = (p.totalAnswered || 0) + baseQ.value   // 统计初始题数
       p.totalCorrect = (p.totalCorrect || 0) + correctCnt.value
 
-      // 冒险进度
+      // 今日统计（F1）
+      const today = new Date().toDateString()
+      if (p.todayDate !== today) { p.todayDate = today; p.todayAnswered = 0; p.todayCorrect = 0 }
+      p.todayAnswered = (p.todayAnswered || 0) + baseQ.value
+      p.todayCorrect = (p.todayCorrect || 0) + correctCnt.value
+
+      // 冒险进度（B3: optional chaining 防 demo 用户崩溃）
       if (gameMode.value === 'adventure') {
-        const ap = p.areaProgress.find(a => a.id === areaId.value)
+        const ap = p.areaProgress?.find(a => a.id === areaId.value)
         if (ap) {
           ap.completed = true
           ap.stars = Math.max(ap.stars || 0, resStars.value)
@@ -1205,12 +1442,20 @@ export default {
 
       newAchs.value = checkAchs(p)
       persist()
+      genCfConfigs()   // B2: 结算时一次性生成 confetti 位置
       screen.value = 'result'
       if (settings.sound) soundWin()
       say(resTitle.value + (newAchs.value.length ? '还获得了新成就！' : ''))
+
+      // F5: 有新成就时延迟弹出成就动画
+      if (newAchs.value.length) {
+        setTimeout(() => { showAchPopup.value = true }, 800)
+      }
     }
 
     function replayGame() {
+      // B10: 先设 screen='game' 再重置，避免 result→game 过渡动画闪烁
+      screen.value = 'game'
       if (gameMode.value === 'adventure') {
         const cfg = AREAS.find(a => a.id === areaId.value)
         if (cfg) qs.value = Array(8).fill(null).map(() => cfg.genQ())
@@ -1219,16 +1464,20 @@ export default {
         if (lv) qs.value = Array(8).fill(null).map(() => lv.gen())
       }
       resetGame()
-      screen.value = 'game'
     }
 
     function goHome() {
-      newAchs.value = []
+      // B4: 先关成就弹窗，再异步清空 newAchs，防止弹窗内容瞬间消失
+      closeAchPopup()
       screen.value = 'main'
       doAnimBear()
+      setTimeout(() => { newAchs.value = [] }, 300)
     }
 
     function exitGame() {
+      // B3: 退出游戏必须清理倒计时，防止幽灵推进
+      clearTimeout(autoNextTimer)
+      autoNext.value = false
       screen.value = gameMode.value === 'practice' ? 'practice' : 'main'
     }
 
@@ -1237,6 +1486,10 @@ export default {
       return curP.value?.unlockedAchievements?.includes(id)
     }
     const achUnlocked = computed(() => curP.value?.unlockedAchievements?.length || 0)
+
+    // F5: 成就弹出
+    const showAchPopup = ref(false)
+    function closeAchPopup() { showAchPopup.value = false }
 
     function checkAchs(p) {
       if (!p.unlockedAchievements) p.unlockedAchievements = []
@@ -1258,18 +1511,20 @@ export default {
       tryGet('streak7', p.streakDays >= 7)
       tryGet('adv2', p.areaProgress?.find(a => a.id === 'beach')?.unlocked)
       tryGet('adv_all', p.areaProgress?.every(a => a.unlocked))
-      tryGet('mul_try', lvKey.value.startsWith('mul'))
+      tryGet('mul_try', (lvKey.value || '').startsWith('mul'))
       tryGet('ans100', p.totalAnswered >= 100)
       return got
     }
 
-    // ── 统计 ──
+    // ── 统计（P3: 每次答题立即保存，防中途退出丢数据）──
     function recStat(key, correct) {
+      if (!key) return
       const p = curP.value
       if (!p.subjectStats) p.subjectStats = {}
       if (!p.subjectStats[key]) p.subjectStats[key] = { total: 0, correct: 0 }
       p.subjectStats[key].total++
       if (correct) p.subjectStats[key].correct++
+      persist()   // P3: 立即持久化
     }
 
     // ── 家长报告 ──
@@ -1341,6 +1596,33 @@ export default {
       speakNatural(text, settings)
     }
 
+    // F1: 今日摘要（用于主页顶栏）
+    const todayStats = computed(() => {
+      const p = curP.value
+      const today = new Date().toDateString()
+      if (!p || p.todayDate !== today) return { answered: 0, correct: 0 }
+      return { answered: p.todayAnswered || 0, correct: p.todayCorrect || 0 }
+    })
+
+    // F2: 练习大厅今日推荐
+    const recommendedLevel = computed(() => {
+      const p = curP.value
+      const allLevels = CATS.flatMap(c => c.levels)
+      if (!p?.subjectStats || Object.keys(p.subjectStats).length === 0) {
+        // 无历史数据 → 按年龄推荐
+        const byAge = { 3: 'cnt5', 4: 'add5', 5: 'mix10', 6: 'mul23' }
+        const key = byAge[p?.age] || 'add5'
+        return allLevels.find(l => l.key === key) || allLevels[0]
+      }
+      // 有数据 → 推荐正确率最低且答题≥3的
+      const weak = Object.entries(p.subjectStats)
+        .filter(([, s]) => s.total >= 3)
+        .sort(([, a], [, b]) => (a.correct / a.total) - (b.correct / b.total))
+      if (!weak.length) return null
+      const weakKey = weak[0][0]
+      return allLevels.find(l => l.key === weakKey) || null
+    })
+
     function sayQuestion() {
       const q = cQ.value
       if (q.speakText) say(q.speakText)
@@ -1357,24 +1639,21 @@ export default {
       setTimeout(() => { showBurst.value = false }, 1000)
     }
 
+    // B2: burstStyle 用确定性计算（无 Math.random），防止每次渲染抖动
     function burstStyle(n) {
       const angle = (n / 18) * 360
+      const sizes = [1.1, 1.4, 1.2, 1.7, 1.3, 1.5, 1.1, 1.6, 1.8, 1.2, 1.4, 1.3, 1.7, 1.1, 1.5, 1.6, 1.2, 1.4]
       return {
         left: (50 + Math.cos(angle * Math.PI / 180) * 38) + '%',
-        top: (42 + Math.sin(angle * Math.PI / 180) * 28) + '%',
+        top:  (42 + Math.sin(angle * Math.PI / 180) * 28) + '%',
         animationDelay: (n * 0.04) + 's',
-        fontSize: (1.1 + Math.random() * 0.7) + 'rem',
+        fontSize: (sizes[n % sizes.length]) + 'rem',
       }
     }
 
+    // B2: cfStyle 已改为使用预计算的 cfConfigs（见 genCfConfigs）
     function cfStyle(n) {
-      return {
-        left: (5 + Math.random() * 88) + '%',
-        top: (5 + Math.random() * 75) + '%',
-        animationDelay: n * 0.05 + 's',
-        transform: `rotate(${Math.random()*360}deg)`,
-        fontSize: (0.9 + Math.random() * 0.7) + 'rem',
-      }
+      return cfConfigs.value[n] || {}
     }
 
     // ── 设置 ──
@@ -1409,16 +1688,18 @@ export default {
     return {
       screen, prevScr, showSettings, showAddProfile, showBurst, bearWalk,
       settings, profiles, curP, curPId, newP, AVATARS,
-      islandAreas, remSecs, remTimeStr,
+      islandAreas, remSecs, remTimeStr, showTimeUp,
+      splashArea, skipSplash,
       gameMode, gameBg, gameTitle,
-      qs, qIdx, totalQ, gScore, correctCnt, wrongCnt,
-      answered, chosen, lastOK, shaking, qKey,
+      qs, qIdx, totalQ, baseQ, gScore, correctCnt, wrongCnt,
+      answered, chosen, lastOK, shaking, qKey, autoNext,
+      consecutiveCorrect,
       cQ, gProgress, isLastQ,
-      resStars, resTitle, resBear, newAchs,
+      resStars, resTitle, resBear, newAchs, cfConfigs,
       feedEmoji, feedMsg, failMsg,
-      ACHS, achUnlocked,
+      ACHS, achUnlocked, showAchPopup, closeAchPopup,
       parentId, prProfile, prAccuracy, prSkills, prTips,
-      CATS,
+      CATS, todayStats, recommendedLevel,
 
       selectProfile, createProfile, playWelcome, playBop,
       startArea, onClickLocked, launchPractice,
@@ -1974,20 +2255,8 @@ export default {
 }
 
 .sym-grid { display: flex; gap: 16px; justify-content: center; padding: 8px 0 }
-.sym-btn {
-  background: rgba(255,255,255,.15); border: 2px solid rgba(255,255,255,.45);
-  border-radius: 22px; width: 90px; height: 90px;
-  font-size: 2.6rem; font-weight: 900; color: #fff;
-  cursor: pointer; transition: all .25s cubic-bezier(.34,1.56,.64,1);
-  display: flex; align-items: center; justify-content: center;
-  text-shadow: 0 2px 10px rgba(0,0,0,.55);
-  box-shadow: 0 4px 18px rgba(0,0,0,.25);
-}
-.sym-btn:hover:not(:disabled) { background: rgba(255,255,255,.28); transform: scale(1.1) }
-.sym-btn.chosen { background: rgba(255,220,0,.35); border-color: #FFD700 }
-.sym-btn.correct { background: rgba(40,170,70,.75) !important; border-color: #5DF097 !important }
-.sym-btn.wrong { background: rgba(210,40,40,.65) !important; border-color: #FF7070 !important }
-.sym-btn:disabled { cursor: default }
+/* sym-btn 定义见下方 "比大小按钮" 区 */
+
 
 /* ═══ 反馈条 ═══ */
 .feedback {
@@ -2005,7 +2274,7 @@ export default {
 }
 .fb-emoji { font-size: 2.4rem; flex-shrink: 0 }
 .fb-text {
-  flex: 1; font-size: 1rem; font-weight: 800; line-height: 1.4;
+  font-size: 1rem; font-weight: 800; line-height: 1.4;
   color: #fff; text-shadow: 0 1px 3px rgba(0,0,0,.4);
 }
 .fb-btn {
@@ -2122,7 +2391,267 @@ export default {
 .burst-p { position: absolute; animation: burstFly .85s ease-out forwards }
 @keyframes burstFly{0%{transform:scale(0) rotate(0);opacity:1}60%{opacity:1}100%{transform:scale(1.2) rotate(380deg) translate(20px,-30px);opacity:0}}
 
-/* ═══ 平板适配（≥768px） ═══ */
+/* ═══ F2: 关卡过场画面 ═══ */
+.splash-screen {
+  position: fixed; inset: 0; z-index: 800;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  cursor: pointer;
+}
+.splash-inner {
+  text-align: center; padding: 0 32px;
+  animation: splashIn .6s cubic-bezier(.34,1.56,.64,1);
+}
+@keyframes splashIn {
+  from { opacity: 0; transform: scale(.7) translateY(30px) }
+  to   { opacity: 1; transform: scale(1) translateY(0) }
+}
+.splash-emoji {
+  font-size: 7rem; display: block; margin-bottom: 16px;
+  animation: splashBob 1.2s ease-in-out infinite;
+  filter: drop-shadow(0 8px 24px rgba(0,0,0,.3));
+}
+@keyframes splashBob {
+  0%,100% { transform: translateY(0) scale(1) }
+  50%     { transform: translateY(-18px) scale(1.08) }
+}
+.splash-name {
+  font-size: 3rem; font-weight: 900; color: #fff;
+  text-shadow: 0 4px 16px rgba(0,0,0,.4); margin-bottom: 14px;
+  letter-spacing: 2px;
+}
+.splash-desc {
+  font-size: 1.15rem; font-weight: 700; color: rgba(255,255,255,.9);
+  text-shadow: 0 2px 8px rgba(0,0,0,.4); margin-bottom: 28px;
+  line-height: 1.5;
+}
+.splash-hint {
+  font-size: .9rem; color: rgba(255,255,255,.65);
+  animation: splashPulse 1.2s ease-in-out infinite;
+}
+@keyframes splashPulse { 0%,100%{opacity:.5} 50%{opacity:1} }
+.splash-bear {
+  position: absolute; bottom: 40px; right: 32px;
+  font-size: 4rem;
+  animation: splashBob 1.8s ease-in-out infinite;
+  animation-delay: .4s;
+}
+
+/* ═══ U3: 数数题行布局 ═══ */
+.vc-row {
+  display: flex; justify-content: center; gap: 8px;
+  margin-bottom: 4px;
+}
+
+/* ═══ U2: 答对自动推进倒计时环 ═══ */
+.fb-body { flex: 1; min-width: 0 }
+.fb-auto-hint {
+  font-size: .78rem; color: rgba(255,255,255,.75);
+  margin-top: 4px; font-weight: 600;
+}
+.fb-auto-ring {
+  position: relative; width: 52px; height: 52px;
+  flex-shrink: 0; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+}
+.far-svg { width: 52px; height: 52px; transform: rotate(-90deg) }
+.far-track {
+  fill: none; stroke: rgba(255,255,255,.22);
+  stroke-width: 3;
+}
+.far-fill {
+  fill: none; stroke: #fff;
+  stroke-width: 3;
+  stroke-dasharray: 100;
+  stroke-dashoffset: 100;
+  stroke-linecap: round;
+  animation: farFill 1.6s linear forwards;
+}
+@keyframes farFill { to { stroke-dashoffset: 0 } }
+.far-icon {
+  position: absolute; font-size: 1.1rem; color: #fff;
+  font-weight: 900;
+}
+
+/* ═══ U6: 比大小按钮 ═══ */
+.sym-btn {
+  background: rgba(255,255,255,.15); border: 2px solid rgba(255,255,255,.45);
+  border-radius: 22px; width: 90px; min-height: 90px; padding: 8px 4px;
+  color: #fff; cursor: pointer;
+  transition: all .25s cubic-bezier(.34,1.56,.64,1);
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center; gap: 2px;
+  text-shadow: 0 2px 10px rgba(0,0,0,.55);
+  box-shadow: 0 4px 18px rgba(0,0,0,.25);
+}
+.sym-btn:hover:not(:disabled) { background: rgba(255,255,255,.28); transform: scale(1.08) }
+.sym-btn.chosen { background: rgba(255,220,0,.35); border-color: #FFD700 }
+.sym-btn.correct { background: rgba(40,170,70,.75) !important; border-color: #5DF097 !important }
+.sym-btn.wrong   { background: rgba(210,40,40,.65) !important; border-color: #FF7070 !important }
+.sym-btn:disabled { cursor: default }
+.sym-main { font-size: 2.2rem; font-weight: 900; line-height: 1 }
+.sym-hint { font-size: 1rem; line-height: 1; opacity: .85 }
+.sym-label { font-size: .68rem; font-weight: 700; opacity: .8; white-space: nowrap }
+
+/* ═══ F5: 成就弹窗 ═══ */
+.ach-popup-bg {
+  position: fixed; inset: 0; background: rgba(0,0,0,.72);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 1000; cursor: pointer; backdrop-filter: blur(6px);
+}
+.ach-popup {
+  background: linear-gradient(160deg,#1a1a4e,#2d1b69);
+  border: 2px solid rgba(255,215,0,.6);
+  border-radius: 32px; padding: 32px 28px;
+  max-width: 360px; width: 92%;
+  text-align: center;
+  box-shadow: 0 0 60px rgba(255,215,0,.3), 0 20px 60px rgba(0,0,0,.5);
+  animation: achPopIn .5s cubic-bezier(.34,1.56,.64,1);
+}
+@keyframes achPopIn {
+  from { transform: scale(.4) rotate(-8deg); opacity: 0 }
+  to   { transform: scale(1) rotate(0); opacity: 1 }
+}
+.ap-title {
+  font-size: 1.4rem; font-weight: 900; color: #FFE566;
+  margin-bottom: 20px; text-shadow: 0 0 20px rgba(255,215,0,.5);
+  letter-spacing: 1px;
+}
+.ap-list { display: flex; flex-direction: column; gap: 12px; margin-bottom: 20px }
+.ap-item {
+  display: flex; align-items: center; gap: 14px;
+  background: rgba(255,255,255,.1); border-radius: 16px;
+  padding: 12px 16px; text-align: left;
+  border: 1px solid rgba(255,215,0,.25);
+  animation: achItemIn .4s cubic-bezier(.34,1.56,.64,1) both;
+}
+.ap-item:nth-child(1) { animation-delay: .1s }
+.ap-item:nth-child(2) { animation-delay: .2s }
+.ap-item:nth-child(3) { animation-delay: .3s }
+@keyframes achItemIn {
+  from { transform: translateX(-20px); opacity: 0 }
+  to   { transform: translateX(0); opacity: 1 }
+}
+.ap-icon { font-size: 2.4rem; flex-shrink: 0 }
+.ap-info { flex: 1 }
+.ap-name { font-size: 1rem; font-weight: 900; color: #FFE566; margin-bottom: 2px }
+.ap-desc { font-size: .8rem; color: rgba(255,255,255,.75) }
+.ap-hint { font-size: .78rem; color: rgba(255,255,255,.45); animation: splashPulse 1.5s infinite }
+
+
+/* ═══ F1: 今日摘要 pill ═══ */
+.stat-pill.today {
+  background: rgba(100,220,140,.35); border: 1px solid rgba(100,220,140,.5);
+  color: #e8fff0;
+}
+
+/* ═══ F2: 练习推荐横幅 ═══ */
+.rec-banner {
+  display: flex; align-items: center; justify-content: space-between;
+  background: linear-gradient(135deg,rgba(255,200,50,.25),rgba(255,140,0,.2));
+  border: 2px solid rgba(255,200,50,.5);
+  border-radius: 20px; padding: 14px 18px; margin-bottom: 18px;
+  cursor: pointer; transition: all .25s cubic-bezier(.34,1.56,.64,1);
+  box-shadow: 0 4px 18px rgba(255,160,0,.2);
+}
+.rec-banner:hover { transform: translateY(-3px); background: linear-gradient(135deg,rgba(255,200,50,.38),rgba(255,140,0,.3)) }
+.rec-banner:active { transform: scale(.97) }
+.rec-left { display: flex; align-items: center; gap: 12px }
+.rec-badge {
+  background: rgba(255,200,0,.85); color: #333;
+  border-radius: 10px; padding: 3px 9px; font-size: .72rem; font-weight: 900;
+  white-space: nowrap; flex-shrink: 0;
+}
+.rec-ico { font-size: 2.2rem; flex-shrink: 0 }
+.rec-info { flex: 1 }
+.rec-name { font-size: 1rem; font-weight: 900; color: #FFE566; margin-bottom: 2px }
+.rec-sub { font-size: .78rem; color: rgba(255,255,255,.75) }
+.rec-arrow { font-size: 1.4rem; color: rgba(255,215,0,.8); font-weight: 900 }
+
+/* ═══ F3: 连击热度计 ═══ */
+.streak-tag {
+  display: flex; align-items: center; gap: 3px;
+  background: rgba(255,100,0,.35); border: 1px solid rgba(255,140,0,.6);
+  border-radius: 14px; padding: 5px 10px;
+  animation: streakPop .3s cubic-bezier(.34,1.56,.64,1);
+  flex-shrink: 0;
+}
+@keyframes streakPop { from{transform:scale(.5)} to{transform:scale(1)} }
+.streak-tag.streak-5 {
+  background: rgba(255,60,0,.45); border-color: rgba(255,100,0,.8);
+  animation: streakGlow 1s ease-in-out infinite;
+}
+@keyframes streakGlow { 0%,100%{box-shadow:0 0 8px rgba(255,100,0,.4)} 50%{box-shadow:0 0 18px rgba(255,100,0,.8)} }
+.st-flame { font-size: .95rem; line-height: 1 }
+.st-num { font-size: .78rem; font-weight: 900; color: #FFD700 }
+
+/* ═══ U3: 加法 A/B 组颜色区分 ═══ */
+.va-group-a {
+  background: rgba(50,120,255,.2) !important;
+  border: 2px solid rgba(80,160,255,.5) !important;
+}
+.va-group-a .va-label { color: #90caff !important }
+.va-group-b {
+  background: rgba(255,140,0,.2) !important;
+  border: 2px solid rgba(255,180,0,.5) !important;
+}
+.va-group-b .va-label { color: #FFD580 !important }
+
+/* ═══ U4: 比大小 overflow dots ═══ */
+.vc-num-lg {
+  font-size: 4.8rem !important;
+  width: 96px !important; height: 96px !important;
+}
+.vc-dots-overflow {
+  display: flex; flex-wrap: wrap; gap: 3px; justify-content: center; max-width: 88px
+}
+.vc-dot-more {
+  font-size: .75rem; font-weight: 900; color: #FFE566;
+  background: rgba(255,215,0,.25); border-radius: 8px;
+  padding: 1px 6px; margin-top: 2px; white-space: nowrap;
+}
+
+/* ═══ U5: 减法大数字模式 ═══ */
+.vs-num-mode {
+  display: flex; align-items: center; justify-content: center;
+  gap: 10px; flex-wrap: wrap; padding: 8px 0;
+}
+.vsn-total, .vsn-remove {
+  display: flex; align-items: center; gap: 6px;
+  background: rgba(255,255,255,.12); border-radius: 16px;
+  padding: 12px 18px; border: 1px solid rgba(255,255,255,.2);
+}
+.vsn-remove { background: rgba(210,40,40,.25); border-color: rgba(255,100,80,.4) }
+.vsn-emoji { font-size: 2rem }
+.cross-emoji { text-decoration: line-through; opacity: .5; filter: grayscale(1) }
+.vsn-num { font-size: 3rem; font-weight: 900; color: #fff; text-shadow: 0 2px 8px rgba(0,0,0,.5) }
+.vsn-red { color: #ff8080 }
+.vsn-label { font-size: 1rem; color: rgba(255,255,255,.8) }
+.vsn-minus {
+  font-size: .9rem; font-weight: 700; color: #ff8080;
+  background: rgba(210,40,40,.2); border-radius: 10px;
+  padding: 5px 10px;
+}
+.vsn-eq {
+  font-size: 2rem; font-weight: 900; color: #FFE566;
+  text-shadow: 0 2px 8px rgba(0,0,0,.4);
+}
+
+/* ═══ U2: 时间归零横幅 ═══ */
+.time-up-banner {
+  position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%);
+  background: linear-gradient(135deg,#1a1a4e,#2d1b69);
+  border: 2px solid rgba(150,120,255,.6);
+  border-radius: 24px; padding: 14px 24px;
+  display: flex; align-items: center; gap: 12px;
+  z-index: 900; box-shadow: 0 8px 32px rgba(0,0,0,.5);
+  min-width: 260px; justify-content: center;
+  animation: tuBannerIn .4s cubic-bezier(.34,1.56,.64,1);
+}
+@keyframes tuBannerIn { from{transform:translateX(-50%) translateY(30px);opacity:0} to{transform:translateX(-50%) translateY(0);opacity:1} }
+.tub-emoji { font-size: 1.8rem }
+.tub-text { font-size: .95rem; font-weight: 800; color: #fff; text-align: center; line-height: 1.4 }
+
 @media (min-width: 768px) {
   .profiles-grid { gap: 22px }
   .profile-btn { min-width: 140px; padding: 24px 22px }
