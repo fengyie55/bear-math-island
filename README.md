@@ -68,9 +68,10 @@ npm run start
 ```
 bear-math-island/
 ├── src/
-│   ├── components/          # Vue 界面组件
-│   ├── stores/              # 状态管理
-│   ├── utils/               # 工具函数
+│   ├── features/
+│   │   └── game/            # 游戏核心功能（UI + 题目引擎 + 测试）
+│   ├── legacy/
+│   │   └── components/      # 旧版未启用组件（待后续逐步清理）
 │   ├── App.vue              # 根组件
 │   ├── main.ts              # TypeScript 入口
 │   └── style.css            # 全局样式
