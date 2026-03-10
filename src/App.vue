@@ -5,7 +5,7 @@
 </template>
 
 <script setup>
-import GameUI from './components/GameUI.vue'
+import GameUI from './features/game/GameUI.vue'
 </script>
 
 <style>
