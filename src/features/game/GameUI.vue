@@ -646,7 +646,8 @@
 
 <script>
 import { reactive, ref, computed, watch, onMounted, onUnmounted } from 'vue'
-import { mkCount, mkAdd, mkSub, mkMix, mkMul, mkCmp } from '../composables/questionEngine'
+import { mkCount, mkAdd, mkSub, mkMix, mkMul, mkCmp } from './questionEngine'
+import { appendRecentAnswer, pickRecommendedLevel } from './recommendationEngine'
 
 // ═══════════════ 工具函数 ═══════════════
 const ri = (a, b) => Math.floor(Math.random() * (b - a + 1)) + a
@@ -1087,6 +1088,7 @@ export default {
     const lastOK = ref(false)
     const shaking = ref(false)
     const qKey = ref(0)
+    const qStartAt = ref(Date.now())
     const perQWrong = ref(0)
     const consecutiveCorrect = ref(0)   // F3: 连续答对计数
 
@@ -1140,13 +1142,15 @@ export default {
       clearTimeout(autoNextTimer)
       baseQ.value = qs.value.length   // B2/B3: 记录初始题目数
       qKey.value++
+      qStartAt.value = Date.now()
       setTimeout(() => sayQuestion(), 500)
     }
 
     function handleAnswer(correct, statKey) {
       answered.value = true
       lastOK.value = correct
-      recStat(statKey, correct)
+      const spentMs = Math.max(300, Date.now() - qStartAt.value)
+      recStat(statKey, correct, cQ.value, spentMs)
       if (correct) {
         correctCnt.value++
         const bonus = perQWrong.value === 0 ? 15 : 10
@@ -1209,6 +1213,7 @@ export default {
       } else {
         qIdx.value++
         qKey.value++
+        qStartAt.value = Date.now()
         setTimeout(() => sayQuestion(), 400)
       }
     }
@@ -1345,13 +1350,24 @@ export default {
     }
 
     // ── 统计（P3: 每次答题立即保存，防中途退出丢数据）──
-    function recStat(key, correct) {
+    function recStat(key, correct, q, spentMs = 0) {
       if (!key) return
       const p = curP.value
       if (!p.subjectStats) p.subjectStats = {}
       if (!p.subjectStats[key]) p.subjectStats[key] = { total: 0, correct: 0 }
       p.subjectStats[key].total++
       if (correct) p.subjectStats[key].correct++
+
+      // V6: 记录最近作答，用于自适应推荐（保留最近60条）
+      p.recentAnswers = appendRecentAnswer(p.recentAnswers, {
+        key,
+        correct,
+        spentMs,
+        domain: q?.domain || null,
+        difficulty: q?.difficulty || null,
+        ts: Date.now(),
+      })
+
       persist()   // P3: 立即持久化
     }
 
@@ -1436,19 +1452,7 @@ export default {
     const recommendedLevel = computed(() => {
       const p = curP.value
       const allLevels = CATS.flatMap(c => c.levels)
-      if (!p?.subjectStats || Object.keys(p.subjectStats).length === 0) {
-        // 无历史数据 → 按年龄推荐
-        const byAge = { 3: 'cnt5', 4: 'add5', 5: 'mix10', 6: 'mul23' }
-        const key = byAge[p?.age] || 'add5'
-        return allLevels.find(l => l.key === key) || allLevels[0]
-      }
-      // 有数据 → 推荐正确率最低且答题≥3的
-      const weak = Object.entries(p.subjectStats)
-        .filter(([, s]) => s.total >= 3)
-        .sort(([, a], [, b]) => (a.correct / a.total) - (b.correct / b.total))
-      if (!weak.length) return null
-      const weakKey = weak[0][0]
-      return allLevels.find(l => l.key === weakKey) || null
+      return pickRecommendedLevel({ profile: p, allLevels })
     })
 
     function sayQuestion() {
